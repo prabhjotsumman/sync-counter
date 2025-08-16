@@ -70,7 +70,7 @@ export async function updateCounter(id: string, updates: { name?: string; value?
   const counter = await getCounter(id);
   if (!counter) return null;
   const now = Date.now();
-  const updateFields: any = { lastUpdated: now };
+  const updateFields: Partial<Counter> = { lastUpdated: now };
   if (typeof updates.value === 'number') updateFields.value = updates.value;
   if (typeof updates.name === 'string') updateFields.name = updates.name;
   const { data, error } = await supabase

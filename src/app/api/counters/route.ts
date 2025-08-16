@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCounters, addCounter } from '@/lib/counters';
 import { broadcastUpdate } from '../sync/broadcast';
-import { promises as fs } from 'fs';
-import path from 'path';
-
-const DATA_FILE = path.join(process.cwd(), 'data', 'counters.json');
 
 export async function GET() {
   try {

@@ -57,23 +57,7 @@ export default function CounterModal({
     }
   };
 
-  const handleDelete = async () => {
-    if (!counter?.id || !onDelete) return;
-
-    if (!confirm('Are you sure you want to delete this counter?')) {
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await onDelete(counter.id);
-      onClose();
-    } catch (error) {
-      console.error('Failed to delete counter:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // ...existing code...
 
   if (!isOpen) return null;
 

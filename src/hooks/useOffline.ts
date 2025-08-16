@@ -18,8 +18,7 @@ export function useOffline(): UseOfflineReturn {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js')
-        .then((registration) => {
-          // setSwRegistration(registration);
+        .then(() => {
           console.log('Service Worker registered successfully');
         })
         .catch((error) => {

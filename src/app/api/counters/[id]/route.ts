@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCounters, updateCounter, deleteCounter } from '@/lib/counters';
+import { updateCounter, deleteCounter } from '@/lib/counters';
 import { broadcastUpdate } from '../../sync/broadcast';
 
 export async function PUT(

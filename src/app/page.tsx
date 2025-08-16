@@ -21,7 +21,7 @@ export default function Home() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'edit' | 'add'>('add');
   const [editingCounter, setEditingCounter] = useState<CounterData | null>(null);
-  const { isOnline, isOffline, pendingRequests, syncOfflineData } = useOffline();
+  const { isOnline, isOffline, pendingRequests } = useOffline();
 
   // Real-time sync handlers
   const handleCounterCreated = useCallback((counter: CounterData) => {
