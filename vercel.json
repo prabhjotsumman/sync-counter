@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "src/app/api/counters/route.ts": {
+      "maxDuration": 10
+    },
+    "src/app/api/counters/[id]/increment/route.ts": {
+      "maxDuration": 10
+    },
+    "src/app/api/counters/[id]/decrement/route.ts": {
+      "maxDuration": 10
+    }
+  },
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install"
+}
