@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCounters } from '@/lib/counters';
+import { getCounters, updateCounter, deleteCounter } from '@/lib/counters';
 import { broadcastUpdate } from '../../sync/broadcast';
-import { promises as fs } from 'fs';
-import path from 'path';
-
-const DATA_FILE = path.join(process.cwd(), 'data', 'counters.json');
 
 export async function PUT(
   request: NextRequest,
@@ -22,40 +18,23 @@ export async function PUT(
       );
     }
 
-    const counters = await getCounters();
-    const counterIndex = counters.findIndex(c => c.id === id);
-    
-    if (counterIndex === -1) {
+    // Use Supabase updateCounter for persistence (name and value)
+    const updatedCounter = await updateCounter(id, { name: name.trim(), value });
+    if (!updatedCounter) {
       return NextResponse.json(
         { error: 'Counter not found' },
         { status: 404 }
       );
     }
-
-    const updatedCounter = {
-      ...counters[counterIndex],
-      name: name.trim(),
-      value: parseInt(value) || counters[counterIndex].value,
-      lastUpdated: Date.now()
-    };
-
-    counters[counterIndex] = updatedCounter;
-    
-    // Save to file
-    await fs.writeFile(DATA_FILE, JSON.stringify(counters, null, 2));
-
     const response = {
       counter: updatedCounter,
       timestamp: Date.now()
     };
-    
-    // Broadcast the updated counter to all connected clients
     broadcastUpdate({
       type: 'counter_updated',
       counter: updatedCounter,
       timestamp: Date.now()
     });
-    
     return NextResponse.json(response);
   } catch (error) {
     console.error('Error updating counter:', error);
@@ -72,34 +51,23 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const counters = await getCounters();
-    const counterIndex = counters.findIndex(c => c.id === id);
-    
-    if (counterIndex === -1) {
+    // Use Supabase deleteCounter for persistence
+    const deleted = await deleteCounter(id);
+    if (!deleted) {
       return NextResponse.json(
         { error: 'Counter not found' },
         { status: 404 }
       );
     }
-
-    const deletedCounter = counters[counterIndex];
-    counters.splice(counterIndex, 1);
-    
-    // Save to file
-    await fs.writeFile(DATA_FILE, JSON.stringify(counters, null, 2));
-
     const response = {
-      counter: deletedCounter,
+      counter: { id },
       timestamp: Date.now()
     };
-    
-    // Broadcast the deleted counter to all connected clients
     broadcastUpdate({
       type: 'counter_deleted',
-      counter: deletedCounter,
+      counter: { id },
       timestamp: Date.now()
     });
-    
     return NextResponse.json(response);
   } catch (error) {
     console.error('Error deleting counter:', error);

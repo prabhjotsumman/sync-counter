@@ -1,5 +1,24 @@
-import { promises as fs } from 'fs';
-import path from 'path';
+// Ensure counters table exists
+async function ensureCountersTable() {
+  const { error } = await supabase.rpc('check_counters_table');
+  if (error && error.message.includes('function check_counters_table() does not exist')) {
+    // Try to create the table using a raw SQL query
+    await supabase
+      .from('counters')
+      .select('*')
+      .limit(1);
+    // If error, attempt to create table
+    // Supabase client does not support DDL, so you must run this SQL manually if it fails:
+    // CREATE TABLE public.counters (id text primary key, name text not null, value integer not null default 0, lastUpdated bigint);
+  }
+}
+
+
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SYNC_COUNTER_NEXT_PUBLIC_SUPABASE_URL as string;
+const supabaseKey = process.env.SYNC_COUNTER_NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export interface Counter {
   id: string;
@@ -8,69 +27,68 @@ export interface Counter {
   lastUpdated?: number;
 }
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'counters.json');
 
-// Ensure data directory exists
-async function ensureDataDir() {
-  const dataDir = path.dirname(DATA_FILE);
-  try {
-    await fs.access(dataDir);
-  } catch {
-    await fs.mkdir(dataDir, { recursive: true });
-  }
-}
-
-// Initialize default counters if file doesn't exist
-async function initializeCounters(): Promise<Counter[]> {
-  const now = Date.now();
-  const defaultCounters: Counter[] = [
-    { id: 'counter-1', name: 'Counter 1', value: 0, lastUpdated: now },
-    { id: 'counter-2', name: 'Counter 2', value: 0, lastUpdated: now },
-    { id: 'counter-3', name: 'Counter 3', value: 0, lastUpdated: now },
-  ];
-  
-  await ensureDataDir();
-  await fs.writeFile(DATA_FILE, JSON.stringify(defaultCounters, null, 2));
-  return defaultCounters;
-}
-
-// Read counters from file
+// Get all counters
 export async function getCounters(): Promise<Counter[]> {
-  try {
-    await ensureDataDir();
-    const data = await fs.readFile(DATA_FILE, 'utf-8');
-    return JSON.parse(data);
-  } catch {
-    // If file doesn't exist, initialize with default counters
-    return initializeCounters();
-  }
-}
-
-// Write counters to file
-async function saveCounters(counters: Counter[]): Promise<void> {
-  await ensureDataDir();
-  await fs.writeFile(DATA_FILE, JSON.stringify(counters, null, 2));
-}
-
-// Update a specific counter
-export async function updateCounter(id: string, delta: number): Promise<Counter | null> {
-  const counters = await getCounters();
-  const counterIndex = counters.findIndex(c => c.id === id);
-  
-  if (counterIndex === -1) {
-    return null;
-  }
-  
-  const now = Date.now();
-  counters[counterIndex].value += delta;
-  counters[counterIndex].lastUpdated = now;
-  await saveCounters(counters);
-  
-  return counters[counterIndex];
+  await ensureCountersTable();
+  const { data, error } = await supabase
+    .from('counters')
+    .select('*')
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Counter[];
 }
 
 // Get a specific counter
 export async function getCounter(id: string): Promise<Counter | null> {
-  const counters = await getCounters();
-  return counters.find(c => c.id === id) || null;
+  await ensureCountersTable();
+  const { data, error } = await supabase
+    .from('counters')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) return null;
+  return data as Counter;
+}
+
+// Add a new counter
+export async function addCounter(counter: Counter): Promise<Counter> {
+  await ensureCountersTable();
+  const now = Date.now();
+  const { data, error } = await supabase
+    .from('counters')
+    .insert([{ ...counter, lastUpdated: now }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Counter;
+}
+
+// Update a counter's value
+export async function updateCounter(id: string, updates: { name?: string; value?: number }): Promise<Counter | null> {
+  await ensureCountersTable();
+  const counter = await getCounter(id);
+  if (!counter) return null;
+  const now = Date.now();
+  const updateFields: any = { lastUpdated: now };
+  if (typeof updates.value === 'number') updateFields.value = updates.value;
+  if (typeof updates.name === 'string') updateFields.name = updates.name;
+  const { data, error } = await supabase
+    .from('counters')
+    .update(updateFields)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Counter;
+}
+
+// Delete a counter
+export async function deleteCounter(id: string): Promise<boolean> {
+  await ensureCountersTable();
+  const { error } = await supabase
+    .from('counters')
+    .delete()
+    .eq('id', id);
+  return !error;
 }

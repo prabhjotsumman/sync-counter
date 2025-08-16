@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCounters } from '@/lib/counters';
+import { getCounters, addCounter } from '@/lib/counters';
 import { broadcastUpdate } from '../sync/broadcast';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -35,7 +35,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const counters = await getCounters();
     const newCounter = {
       id: `counter-${Date.now()}`,
       name: name.trim(),
@@ -43,23 +42,19 @@ export async function POST(request: Request) {
       lastUpdated: Date.now()
     };
 
-    counters.push(newCounter);
-    
-    // Save to file
-    await fs.writeFile(DATA_FILE, JSON.stringify(counters, null, 2));
+    const created = await addCounter(newCounter);
 
     const response = {
-      counter: newCounter,
+      counter: created,
       timestamp: Date.now()
     };
-    
-    // Broadcast the new counter to all connected clients
+
     broadcastUpdate({
       type: 'counter_created',
-      counter: newCounter,
+      counter: created,
       timestamp: Date.now()
     });
-    
+
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
     console.error('Error creating counter:', error);
