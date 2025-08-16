@@ -1,3 +1,0 @@
-{
-  "/api/counters/[id]/increment/route": "app/api/counters/[id]/increment/route.js"
-}

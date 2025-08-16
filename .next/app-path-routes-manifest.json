@@ -1,8 +1,0 @@
-{
-  "/_not-found/page": "/_not-found",
-  "/api/counters/[id]/decrement/route": "/api/counters/[id]/decrement",
-  "/api/counters/[id]/increment/route": "/api/counters/[id]/increment",
-  "/api/counters/route": "/api/counters",
-  "/favicon.ico/route": "/favicon.ico",
-  "/page": "/"
-}
