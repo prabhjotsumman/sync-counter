@@ -1,0 +1,8 @@
+{
+  "/api/counters/[id]/increment/route": "app/api/counters/[id]/increment/route.js",
+  "/api/counters/[id]/route": "app/api/counters/[id]/route.js",
+  "/api/counters/route": "app/api/counters/route.js",
+  "/api/sync/route": "app/api/sync/route.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/page": "app/page.js"
+}

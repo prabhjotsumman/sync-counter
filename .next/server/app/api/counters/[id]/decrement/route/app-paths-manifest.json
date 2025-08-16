@@ -1,0 +1,3 @@
+{
+  "/api/counters/[id]/decrement/route": "app/api/counters/[id]/decrement/route.js"
+}
