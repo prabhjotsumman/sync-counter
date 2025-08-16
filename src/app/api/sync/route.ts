@@ -1,28 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+
+import { NextRequest } from 'next/server';
 import { getCounters } from '@/lib/counters';
-
-// Store connected clients
-const clients = new Set<ReadableStreamDefaultController>();
-
-// Broadcast function to send updates to all clients
-export function broadcastUpdate(data: any) {
-  const message = `data: ${JSON.stringify(data)}\n\n`;
-  clients.forEach(client => {
-    try {
-      client.enqueue(new TextEncoder().encode(message));
-    } catch (error) {
-      console.error('Error broadcasting to client:', error);
-    }
-  });
-}
+import { addClient, removeClient } from './broadcast';
 
 export async function GET(request: NextRequest) {
   const stream = new ReadableStream({
     start(controller) {
-      // Add client to the set
-      clients.add(controller);
-      
-      // Send initial data
+      addClient(controller);
+
       getCounters().then(counters => {
         const message = `data: ${JSON.stringify({
           type: 'initial',
@@ -32,9 +17,8 @@ export async function GET(request: NextRequest) {
         controller.enqueue(new TextEncoder().encode(message));
       });
 
-      // Handle client disconnect
       request.signal.addEventListener('abort', () => {
-        clients.delete(controller);
+        removeClient(controller);
         controller.close();
       });
     }

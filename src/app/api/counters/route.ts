@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCounters } from '@/lib/counters';
-import { broadcastUpdate } from '../sync/route';
+import { broadcastUpdate } from '../sync/broadcast';
 import { promises as fs } from 'fs';
 import path from 'path';
 

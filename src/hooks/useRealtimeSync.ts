@@ -1,19 +1,21 @@
 import { useEffect, useRef } from 'react';
 
+import type { CounterData } from '@/app/page';
+
 interface SyncEvent {
   type: 'initial' | 'counter_created' | 'counter_updated' | 'counter_deleted' | 'counter_incremented' | 'counter_decremented';
-  counter?: any;
-  counters?: any[];
+  counter?: CounterData;
+  counters?: CounterData[];
   timestamp: number;
 }
 
 interface UseRealtimeSyncProps {
-  onCounterCreated?: (counter: any) => void;
-  onCounterUpdated?: (counter: any) => void;
-  onCounterDeleted?: (counter: any) => void;
-  onCounterIncremented?: (counter: any) => void;
-  onCounterDecremented?: (counter: any) => void;
-  onInitialData?: (counters: any[]) => void;
+  onCounterCreated?: (counter: CounterData) => void;
+  onCounterUpdated?: (counter: CounterData) => void;
+  onCounterDeleted?: (counter: CounterData) => void;
+  onCounterIncremented?: (counter: CounterData) => void;
+  onCounterDecremented?: (counter: CounterData) => void;
+  onInitialData?: (counters: CounterData[]) => void;
   isOnline?: boolean;
 }
 

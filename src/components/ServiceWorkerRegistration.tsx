@@ -19,21 +19,17 @@ export default function ServiceWorkerRegistration() {
     }
 
     // Handle PWA installation
-    let deferredPrompt: any;
+  // let deferredPrompt: Event | null;
 
     window.addEventListener('beforeinstallprompt', (e) => {
       // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault();
-      // Stash the event so it can be triggered later
-      deferredPrompt = e;
-      
       // Show install button or notification
       console.log('PWA install prompt available');
     });
 
     window.addEventListener('appinstalled', () => {
       console.log('PWA was installed');
-      deferredPrompt = null;
     });
   }, []);
 

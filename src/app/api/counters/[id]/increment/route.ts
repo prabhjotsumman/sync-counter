@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateCounter } from '@/lib/counters';
-import { broadcastUpdate } from '../../../sync/route';
+import { broadcastUpdate } from '../../../sync/broadcast';
 
 export async function POST(
   request: NextRequest,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { updateOfflineCounter, saveOfflineCounters, getOfflineCounters } from '@/lib/offlineStorage';
+import { updateOfflineCounter, saveOfflineCounters } from '@/lib/offlineStorage';
 
 interface CounterProps {
   id: string;

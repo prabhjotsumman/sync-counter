@@ -7,7 +7,7 @@ import { useOffline } from '@/hooks/useOffline';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { getOfflineCounters, saveOfflineCounters, clearPendingChanges, mergeServerData, syncPendingChangesToServer, addOfflineCounter, updateOfflineCounterData, deleteOfflineCounter } from '@/lib/offlineStorage';
 
-interface CounterData {
+export interface CounterData {
   id: string;
   name: string;
   value: number;
@@ -393,7 +393,7 @@ export default function Home() {
           
           {isOffline && (
             <div className="text-yellow-400 text-sm">
-              You're offline. Changes will be synced when you're back online.
+              You&apos;re offline. Changes will be synced when you&apos;re back online.
             </div>
           )}
           

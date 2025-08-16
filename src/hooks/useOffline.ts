@@ -11,7 +11,7 @@ interface UseOfflineReturn {
 export function useOffline(): UseOfflineReturn {
   const [isOnline, setIsOnline] = useState(true);
   const [pendingRequests, setPendingRequests] = useState(0);
-  const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null);
+  // const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null);
 
   // Register service worker
   useEffect(() => {
@@ -19,7 +19,7 @@ export function useOffline(): UseOfflineReturn {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
-          setSwRegistration(registration);
+          // setSwRegistration(registration);
           console.log('Service Worker registered successfully');
         })
         .catch((error) => {
@@ -27,6 +27,26 @@ export function useOffline(): UseOfflineReturn {
         });
     }
   }, []);
+
+  // Sync offline data when back online
+  const syncOfflineData = useCallback(async () => {
+    if (!isOnline) return;
+
+    try {
+      const changes = getPendingChanges();
+      if (changes.length === 0) return;
+
+      console.log(`Syncing ${changes.length} offline changes...`);
+      // Sync pending changes to server
+      const success = await syncPendingChangesToServer();
+      if (success) {
+        // Trigger a page refresh to get updated data
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Failed to sync offline data:', error);
+    }
+  }, [isOnline]);
 
   // Listen for online/offline events
   useEffect(() => {
@@ -54,7 +74,7 @@ export function useOffline(): UseOfflineReturn {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [pendingRequests]);
+  }, [pendingRequests, syncOfflineData]);
 
   // Update pending requests count
   const updatePendingCount = useCallback(() => {
@@ -62,26 +82,7 @@ export function useOffline(): UseOfflineReturn {
     setPendingRequests(changes.length);
   }, []);
 
-  // Sync offline data when back online
-  const syncOfflineData = useCallback(async () => {
-    if (!isOnline) return;
-
-    try {
-      const changes = getPendingChanges();
-      if (changes.length === 0) return;
-
-      console.log(`Syncing ${changes.length} offline changes...`);
-      
-      // Sync pending changes to server
-      const success = await syncPendingChangesToServer();
-      if (success) {
-        // Trigger a page refresh to get updated data
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error('Failed to sync offline data:', error);
-    }
-  }, [isOnline]);
+  // ...existing code...
 
   // Initialize pending requests count and update periodically
   useEffect(() => {
