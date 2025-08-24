@@ -10,12 +10,12 @@ interface CounterProps {
   onUpdate: (id: string, newValue: number) => void;
   isOffline?: boolean;
   allCounters?: Array<{ id: string; name: string; value: number; contribution?: Record<string, number> }>;
-  isManageMode?: boolean;
+  // isManageMode?: boolean; // removed unused
   onEdit?: (counter: { id: string; name: string; value: number }) => void;
   onDelete?: (id: string) => void;
 }
 
-export default function Counter({ id, name, value, onUpdate, isOffline = false, allCounters = [], isManageMode = false, onEdit, onDelete }: CounterProps) {
+  export default function Counter({ id, name, value, onUpdate, isOffline = false, allCounters = [], onEdit, onDelete }: CounterProps) {
   let currentUser = typeof window !== 'undefined' ? localStorage.getItem('syncCounterUser') : undefined;
 
   // Prompt for username if not present
@@ -38,8 +38,8 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
   }
 
   // Calculate user's share for this counter
-  let userShare = 0;
-  let total = value;
+  // let userShare = 0; // removed unused variable
+  const total = value;
   if (typeof window !== 'undefined' && currentUser && allCounters && Array.isArray(allCounters)) {
     // Try to get user contributions from localStorage or from counter object
     const userContributionsRaw = localStorage.getItem('syncCounterContributions');
@@ -51,11 +51,12 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
     }
     // userContributions[currentUser][id] is the user's contribution for this counter
     if (userContributions[currentUser] && userContributions[currentUser][id] && total > 0) {
-      userShare = Math.round((userContributions[currentUser][id] / total) * 100);
+  // removed assignment to userShare (variable no longer exists)
     }
   }
   const [isLoading, setIsLoading] = useState(false);
   const [lastAction, setLastAction] = useState<'increment' | 'decrement' | null>(null);
+  const [showContributions, setShowContributions] = useState(false);
 
   const handleIncrement = async () => {
     setIsLoading(true);
@@ -68,7 +69,7 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
       return;
     }
     // Prepare contributions object
-    let userContributionsRaw = localStorage.getItem('syncCounterContributions');
+  const userContributionsRaw = localStorage.getItem('syncCounterContributions');
     let userContributions: Record<string, Record<string, number>> = {};
     if (userContributionsRaw) {
       try { userContributions = JSON.parse(userContributionsRaw); } catch {}
@@ -120,7 +121,7 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
           counter.contribution[currentUser] += 1;
         }
         // Update contribution in localStorage
-        let userContributionsRaw = localStorage.getItem('syncCounterContributions');
+  const userContributionsRaw = localStorage.getItem('syncCounterContributions');
         let userContributions: Record<string, Record<string, number>> = {};
         if (userContributionsRaw) {
           try { userContributions = JSON.parse(userContributionsRaw); } catch {}
@@ -137,7 +138,7 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
         onUpdate(id, updatedCounter.value);
       }
       // Update contribution in localStorage
-      let userContributionsRaw = localStorage.getItem('syncCounterContributions');
+  const userContributionsRaw = localStorage.getItem('syncCounterContributions');
       let userContributions: Record<string, Record<string, number>> = {};
       if (userContributionsRaw) {
         try { userContributions = JSON.parse(userContributionsRaw); } catch {}
@@ -151,99 +152,6 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
     }
   };
 
-  const handleDecrement = async () => {
-    setIsLoading(true);
-    setLastAction('decrement');
-    // Ensure username is present
-    currentUser = getOrAskUsername();
-    if (!currentUser) {
-      setIsLoading(false);
-      setLastAction(null);
-      return;
-    }
-    // Prepare contributions object
-    let userContributionsRaw = localStorage.getItem('syncCounterContributions');
-    let userContributions: Record<string, Record<string, number>> = {};
-    if (userContributionsRaw) {
-      try { userContributions = JSON.parse(userContributionsRaw); } catch {}
-    }
-    // If currentUser is not present for this counter, add with 0
-    if (!userContributions[currentUser]) userContributions[currentUser] = {};
-    if (userContributions[currentUser][id] === undefined) userContributions[currentUser][id] = 0;
-    if (isOffline) {
-      // Handle offline decrement
-      const updatedCounter = updateOfflineCounter(id, -1);
-      if (updatedCounter) {
-        onUpdate(id, updatedCounter.value);
-        // Update contribution in allCounters (frontend)
-        const idx = allCounters.findIndex(c => c.id === id);
-        if (idx !== -1) {
-          const counter = allCounters[idx];
-          if (!counter.contribution) counter.contribution = {};
-          if (counter.contribution[currentUser] === undefined) counter.contribution[currentUser] = 0;
-          counter.contribution[currentUser] -= 1;
-        }
-      }
-      userContributions[currentUser][id] -= 1;
-      localStorage.setItem('syncCounterContributions', JSON.stringify(userContributions));
-      setIsLoading(false);
-      setTimeout(() => setLastAction(null), 1000);
-      return;
-    }
-    try {
-      const response = await fetch(`/api/counters/${id}/decrement`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, name, value, currentUser })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const updatedCounter = data.counter;
-        onUpdate(id, updatedCounter.value);
-        // Update local storage with the latest counter values
-        const updatedCounters = allCounters.map(counter => 
-          counter.id === id ? { ...counter, value: updatedCounter.value } : counter
-        );
-        saveOfflineCounters(updatedCounters);
-        // Update contribution in allCounters (frontend)
-        const idx = allCounters.findIndex(c => c.id === id);
-        if (idx !== -1) {
-          const counter = allCounters[idx];
-          if (!counter.contribution) counter.contribution = {};
-          if (counter.contribution[currentUser] === undefined) counter.contribution[currentUser] = 0;
-          counter.contribution[currentUser] -= 1;
-        }
-        // Update contribution in localStorage
-        let userContributionsRaw = localStorage.getItem('syncCounterContributions');
-        let userContributions: Record<string, Record<string, number>> = {};
-        if (userContributionsRaw) {
-          try { userContributions = JSON.parse(userContributionsRaw); } catch {}
-        }
-        if (!userContributions[currentUser]) userContributions[currentUser] = {};
-        userContributions[currentUser][id] = (userContributions[currentUser][id] || 0) - 1;
-        localStorage.setItem('syncCounterContributions', JSON.stringify(userContributions));
-      }
-    } catch (error) {
-      console.error('Error decrementing counter:', error);
-      // Fallback to offline mode if network fails
-      const updatedCounter = updateOfflineCounter(id, -1);
-      if (updatedCounter) {
-        onUpdate(id, updatedCounter.value);
-      }
-      // Update contribution in localStorage
-      let userContributionsRaw = localStorage.getItem('syncCounterContributions');
-      let userContributions: Record<string, Record<string, number>> = {};
-      if (userContributionsRaw) {
-        try { userContributions = JSON.parse(userContributionsRaw); } catch {}
-      }
-      if (!userContributions[currentUser]) userContributions[currentUser] = {};
-      userContributions[currentUser][id] = (userContributions[currentUser][id] || 0) - 1;
-      localStorage.setItem('syncCounterContributions', JSON.stringify(userContributions));
-    } finally {
-      setIsLoading(false);
-      setTimeout(() => setLastAction(null), 1000);
-    }
-  };
 
   return (
     <div className={`bg-gray-900 rounded-lg p-8 text-center min-w-[300px] transition-all duration-200 ${
@@ -258,65 +166,52 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
               Offline
             </div>
           )}
-          {isManageMode && onEdit && (
-            <>
-              <button
-                onClick={() => onEdit({ id, name, value })}
-                className="p-1 text-gray-400 hover:text-white transition-colors duration-200"
-                title="Edit counter"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-              {onDelete && (
-                <button
-                  onClick={() => {
-                    if (window.confirm('Are you sure you want to delete this counter?')) {
-                      onDelete(id);
-                    }
-                  }}
-                  className="p-1 text-red-400 hover:text-red-600 transition-colors duration-200"
-                  title="Delete counter"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </>
+          {onEdit && (
+            <button
+              onClick={() => onEdit({ id, name, value })}
+              className="p-1 text-gray-400 hover:text-white transition-colors duration-200 text-3xl"
+              title="Edit counter"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={() => {
+                if (window.confirm('Are you sure you want to delete this counter?')) {
+                  onDelete(id);
+                }
+              }}
+              className="p-1 text-red-400 hover:text-red-600 transition-colors duration-200 text-3xl"
+              title="Delete counter"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           )}
         </div>
       </div>
       
-      <div className={`text-6xl font-bold mb-8 transition-all duration-300 ${
-        lastAction === 'increment' ? 'text-green-400' : 
-        lastAction === 'decrement' ? 'text-red-400' : 
-        'text-white'
-      }`}>
-        {value}
-      </div>
+        <div className={`text-8xl font-extrabold mb-8 transition-all duration-300 break-words overflow-hidden truncate max-w-full ${
+          lastAction === 'increment' ? 'text-green-400' : 
+          lastAction === 'decrement' ? 'text-red-400' : 
+          'text-white'
+        }`}>
+          <span style={{ fontSize: value > 99999 ? '5rem' : undefined }}>{value}</span>
+        </div>
       
       <div className="flex gap-4 justify-center">
         <button
-          onClick={handleDecrement}
-          disabled={isLoading}
-          className={`font-bold py-3 px-6 rounded-lg text-xl transition-all duration-200 min-w-[80px] ${
-            isLoading && lastAction === 'decrement'
-              ? 'bg-red-800 text-gray-300 cursor-not-allowed'
-              : 'bg-red-600 hover:bg-red-700 text-white'
-          }`}
-        >
-          –
-        </button>
-        <button
           onClick={handleIncrement}
           disabled={isLoading}
-          className={`font-bold py-3 px-6 rounded-lg text-xl transition-all duration-200 min-w-[80px] ${
-            isLoading && lastAction === 'increment'
+          className={`font-bold py-6 px-0 rounded-lg text-5xl transition-all duration-200 w-full max-w-[340px] 
+            ${isLoading && lastAction === 'increment'
               ? 'bg-green-800 text-gray-300 cursor-not-allowed'
-              : 'bg-green-600 hover:bg-green-700 text-white'
-          }`}
+              : 'bg-green-600 hover:bg-green-700 text-white'}
+          `}
         >
           +
         </button>
@@ -327,20 +222,49 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
       {typeof window !== 'undefined' && allCounters && Array.isArray(allCounters) && (() => {
         const thisCounter = allCounters.find(c => c.id === id);
         if (thisCounter && thisCounter.contribution && typeof thisCounter.contribution === 'object') {
-          const entries = Object.entries(thisCounter.contribution);
+          // Sort entries by descending contribution value
+          const entries = Object.entries(thisCounter.contribution)
+            .sort((a, b) => (b[1] as number) - (a[1] as number));
           if (entries.length > 0) {
             return (
-              <div className="mt-6 text-sm text-gray-300 font-medium flex flex-col items-center">
-                <span className="mb-1">Contributions:</span>
-                <ul className="list-none p-0 m-0">
-                  {entries.map(([user, val]) => (
-                    <li key={user} className="mb-1">
-                      <span className="font-semibold text-white">{capitalize(user)}</span>
-                      {': '}
-                      <span className="font-semibold text-blue-400">{String(val)}</span>
-                    </li>
-                  ))}
-                </ul>
+              <div className="mt-6 flex flex-col items-start w-full">
+                <button
+                  className={`flex items-center gap-2 text-white font-normal text-lg mb-2 px-0 py-2 focus:outline-none transition-all duration-300`}
+                  style={{ background: 'none', justifyContent: 'flex-start' }}
+                  onClick={() => setShowContributions((prev) => !prev)}
+                  aria-expanded={showContributions}
+                >
+                  <span className="text-xl">{showContributions ? '▼' : '▶'}</span>
+                  <span>Contributions</span>
+                </button>
+                <div
+                  className={`overflow-x-auto w-full max-w-xs transition-all duration-700 ease-in-out ${showContributions ? 'max-h-[500px] opacity-100 scale-100' : 'max-h-0 opacity-0 scale-95'} pointer-events-${showContributions ? 'auto' : 'none'}`}
+                  style={{
+                    transitionProperty: 'max-height, opacity, transform',
+                    marginLeft: 0,
+                  }}
+                >
+                  <div style={{ transition: 'opacity 0.7s, transform 0.7s', opacity: showContributions ? 1 : 0, transform: showContributions ? 'scaleY(1)' : 'scaleY(0.95)' }}>
+                    {showContributions && (
+                      <table className="min-w-full border border-gray-700 rounded-lg bg-gray-800">
+                        <thead>
+                          <tr>
+                            <th className="px-4 py-2 text-left text-gray-300 border-b border-gray-700">User</th>
+                            <th className="px-4 py-2 text-left text-gray-300 border-b border-gray-700">Contribution</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {entries.map(([user, val]) => (
+                            <tr key={user} className="hover:bg-gray-700 transition">
+                              <td className="px-4 py-2 text-left text-white border-b border-gray-700">{capitalize(user)}</td>
+                              <td className="px-4 py-2 text-left text-white font-normal border-b border-gray-700">{String(val)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
               </div>
             );
           }

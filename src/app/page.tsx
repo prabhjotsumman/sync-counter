@@ -17,7 +17,7 @@ export default function Page() {
   const [counters, setCounters] = useState<CounterData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isManageMode, setIsManageMode] = useState(false);
+  const [isManageMode] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'edit' | 'add'>('add');
   const [editingCounter, setEditingCounter] = useState<CounterData | null>(null);
@@ -353,7 +353,13 @@ export default function Page() {
               }`}></div>
               {isOnline ? 'Online' : 'Offline'}
             </div>
-            
+            {/* Local badge if running in local mode */}
+            {typeof process !== 'undefined' && process.env.NODE_ENV === 'development' && (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full text-sm bg-blue-900 text-blue-300">
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                <span>Local</span>
+              </div>
+            )}
             {isOnline && (
               <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
                 isConnected 
@@ -386,9 +392,8 @@ export default function Page() {
               onUpdate={handleCounterUpdate}
               isOffline={isOffline}
               allCounters={counters}
-              isManageMode={isManageMode}
               onEdit={handleEditCounter}
-              onDelete={isManageMode ? handleDeleteCounter : undefined}
+              onDelete={handleDeleteCounter}
             />
           ))}
         </div>
@@ -396,25 +401,11 @@ export default function Page() {
         <div className="text-center mt-12 space-y-4">
           <div className="flex gap-4 justify-center">
             <button
-              onClick={() => setIsManageMode(!isManageMode)}
-              className={`px-6 py-3 rounded-lg transition-colors duration-200 ${
-                isManageMode 
-                  ? 'bg-red-600 hover:bg-red-700 text-white' 
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
+              onClick={handleAddCounter}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors duration-200"
             >
-              {isManageMode ? 'Exit Manage Mode' : 'Manage Counters'}
+              Add New Counter
             </button>
-            
-            {isManageMode && (
-              <button
-                onClick={handleAddCounter}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors duration-200"
-              >
-                Add New Counter
-              </button>
-            )}
-            
             {pendingRequests > 0 && isOnline && (
               <button
                 onClick={() => syncPendingChangesToServer().then(() => fetchCounters())}
@@ -445,7 +436,7 @@ export default function Page() {
           counter={editingCounter}
           mode={modalMode}
           onSave={handleSaveCounter}
-          onDelete={modalMode === 'edit' ? handleDeleteCounter : undefined}
+          // onDelete removed
         />
       </div>
     </div>

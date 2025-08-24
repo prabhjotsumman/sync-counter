@@ -9,7 +9,7 @@ interface CounterModalProps {
   counter?: Counter | null;
   mode: 'edit' | 'add';
   onSave: (counter: Omit<Counter, 'id'> & { id?: string }) => void;
-  onDelete?: (id: string) => void;
+  // onDelete?: (id: string) => void; // removed unused
 }
 
 export default function CounterModal({ 
@@ -18,7 +18,7 @@ export default function CounterModal({
   counter, 
   mode, 
   onSave, 
-  onDelete 
+  // onDelete removed
 }: CounterModalProps) {
   const [name, setName] = useState('');
   const [value, setValue] = useState(0);

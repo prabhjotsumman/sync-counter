@@ -79,16 +79,16 @@ export async function addCounter(counter: Counter, currentUser?: string): Promis
     const dbFile = path.resolve(process.cwd(), localDbPath);
     const counters = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile, 'utf-8')) : [];
     const now = Date.now();
-  const newCounter = { ...counter, lastUpdated: now, currentUser };
+    const newCounter = { ...counter, lastUpdated: now };
     counters.push(newCounter);
     fs.writeFileSync(dbFile, JSON.stringify(counters, null, 2));
     return newCounter;
   } else {
-  await ensureCountersTable();
-  const now = Date.now();
-  const { data, error } = await supabase!.from('counters').insert([{ ...counter, lastUpdated: now, currentUser }]).select().single();
-  if (error || !isCounter(data)) throw error;
-  return data as Counter;
+    await ensureCountersTable();
+    const now = Date.now();
+    const { data, error } = await supabase!.from('counters').insert([{ ...counter, lastUpdated: now }]).select().single();
+    if (error || !isCounter(data)) throw error;
+    return data as Counter;
   }
 }
 
@@ -101,15 +101,7 @@ export async function updateCounter(id: string, updates: { name?: string; value?
     if (idx === -1) return null;
     const now = Date.now();
     // Update contribution object
-    let contribution = counters[idx].contribution || {};
-    if (currentUser) {
-      if (contribution[currentUser] === undefined) contribution[currentUser] = 0;
-      // Determine increment or decrement
-      if (typeof updates.value === 'number') {
-        const diff = updates.value - counters[idx].value;
-        contribution[currentUser] += diff;
-      }
-    }
+    const contribution = counters[idx].contribution || {};
     counters[idx] = { ...counters[idx], ...updates, lastUpdated: now, contribution };
     fs.writeFileSync(dbFile, JSON.stringify(counters, null, 2));
     return counters[idx];
