@@ -7,8 +7,10 @@ export interface Counter {
 }
 
 // Type guard for Counter
-function isCounter(obj: any): obj is Counter {
-  return obj && typeof obj.id === 'string' && typeof obj.name === 'string' && typeof obj.value === 'number';
+function isCounter(obj: unknown): obj is Counter {
+  if (typeof obj !== 'object' || obj === null) return false;
+  const c = obj as Record<string, unknown>;
+  return typeof c.id === 'string' && typeof c.name === 'string' && typeof c.value === 'number';
 }
 
 // Ensure counters table exists
@@ -31,11 +33,12 @@ import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 
-const localDbPath = process.env.SYNC_COUNTER_LOCAL_DB_PATH;
+const isProd = process.env.NODE_ENV === 'production';
+const localDbPath = !isProd ? process.env.SYNC_COUNTER_LOCAL_DB_PATH : undefined;
 const isLocal = !!localDbPath;
 
 let supabase: ReturnType<typeof createClient> | null = null;
-if (!isLocal) {
+if (isProd || !isLocal) {
   const supabaseUrl = process.env.SYNC_COUNTER_NEXT_PUBLIC_SUPABASE_URL as string;
   const supabaseKey = process.env.SYNC_COUNTER_NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
   supabase = createClient(supabaseUrl, supabaseKey);
