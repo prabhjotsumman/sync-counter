@@ -9,49 +9,125 @@ interface CounterProps {
   value: number;
   onUpdate: (id: string, newValue: number) => void;
   isOffline?: boolean;
-  allCounters?: Array<{ id: string; name: string; value: number }>;
+  allCounters?: Array<{ id: string; name: string; value: number; contribution?: Record<string, number> }>;
   isManageMode?: boolean;
   onEdit?: (counter: { id: string; name: string; value: number }) => void;
   onDelete?: (id: string) => void;
 }
 
 export default function Counter({ id, name, value, onUpdate, isOffline = false, allCounters = [], isManageMode = false, onEdit, onDelete }: CounterProps) {
-  const currentUser = typeof window !== 'undefined' ? localStorage.getItem('syncCounterUser') : undefined;
+  let currentUser = typeof window !== 'undefined' ? localStorage.getItem('syncCounterUser') : undefined;
+
+  // Prompt for username if not present
+  function getOrAskUsername() {
+    if (typeof window === 'undefined') return undefined;
+    let user = localStorage.getItem('syncCounterUser');
+    if (!user) {
+      const promptResult = window.prompt('Please enter your username:');
+      user = promptResult ? promptResult.trim() : null;
+      if (user) {
+        localStorage.setItem('syncCounterUser', user);
+      }
+    }
+    return user;
+  }
+  // Helper to capitalize first letter
+  function capitalize(str?: string) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  // Calculate user's share for this counter
+  let userShare = 0;
+  let total = value;
+  if (typeof window !== 'undefined' && currentUser && allCounters && Array.isArray(allCounters)) {
+    // Try to get user contributions from localStorage or from counter object
+    const userContributionsRaw = localStorage.getItem('syncCounterContributions');
+    let userContributions: Record<string, Record<string, number>> = {};
+    if (userContributionsRaw) {
+      try {
+        userContributions = JSON.parse(userContributionsRaw);
+      } catch {}
+    }
+    // userContributions[currentUser][id] is the user's contribution for this counter
+    if (userContributions[currentUser] && userContributions[currentUser][id] && total > 0) {
+      userShare = Math.round((userContributions[currentUser][id] / total) * 100);
+    }
+  }
   const [isLoading, setIsLoading] = useState(false);
   const [lastAction, setLastAction] = useState<'increment' | 'decrement' | null>(null);
 
   const handleIncrement = async () => {
     setIsLoading(true);
     setLastAction('increment');
-    
+    // Ensure username is present
+    currentUser = getOrAskUsername();
+    if (!currentUser) {
+      setIsLoading(false);
+      setLastAction(null);
+      return;
+    }
+    // Prepare contributions object
+    let userContributionsRaw = localStorage.getItem('syncCounterContributions');
+    let userContributions: Record<string, Record<string, number>> = {};
+    if (userContributionsRaw) {
+      try { userContributions = JSON.parse(userContributionsRaw); } catch {}
+    }
+    // If currentUser is not present for this counter, add with 0
+    if (!userContributions[currentUser]) userContributions[currentUser] = {};
+    if (userContributions[currentUser][id] === undefined) userContributions[currentUser][id] = 0;
     if (isOffline) {
       // Handle offline increment
       const updatedCounter = updateOfflineCounter(id, 1);
       if (updatedCounter) {
         onUpdate(id, updatedCounter.value);
+        // Update contribution in allCounters (frontend)
+        const idx = allCounters.findIndex(c => c.id === id);
+        if (idx !== -1) {
+          const counter = allCounters[idx];
+          if (!counter.contribution) counter.contribution = {};
+          if (counter.contribution[currentUser] === undefined) counter.contribution[currentUser] = 0;
+          counter.contribution[currentUser] += 1;
+        }
       }
+      userContributions[currentUser][id] += 1;
+      localStorage.setItem('syncCounterContributions', JSON.stringify(userContributions));
       setIsLoading(false);
       setTimeout(() => setLastAction(null), 1000);
       return;
     }
-
     try {
       const response = await fetch(`/api/counters/${id}/increment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, name, value, currentUser })
       });
-      
       if (response.ok) {
         const data = await response.json();
         const updatedCounter = data.counter;
         onUpdate(id, updatedCounter.value);
-        
         // Update local storage with the latest counter values
         const updatedCounters = allCounters.map(counter => 
           counter.id === id ? { ...counter, value: updatedCounter.value } : counter
         );
         saveOfflineCounters(updatedCounters);
+        // Update contribution in allCounters (frontend)
+        const idx = allCounters.findIndex(c => c.id === id);
+        if (idx !== -1) {
+          const counter = allCounters[idx];
+          if (!counter.contribution) counter.contribution = {};
+          if (counter.contribution[currentUser] === undefined) counter.contribution[currentUser] = 0;
+          counter.contribution[currentUser] += 1;
+        }
+        // Update contribution in localStorage
+        let userContributionsRaw = localStorage.getItem('syncCounterContributions');
+        let userContributions: Record<string, Record<string, number>> = {};
+        if (userContributionsRaw) {
+          try { userContributions = JSON.parse(userContributionsRaw); } catch {}
+        }
+        if (!userContributions[currentUser]) userContributions[currentUser] = {};
+        userContributions[currentUser][id] = (userContributions[currentUser][id] || 0) + 1;
+        localStorage.setItem('syncCounterContributions', JSON.stringify(userContributions));
       }
     } catch (error) {
       console.error('Error incrementing counter:', error);
@@ -60,9 +136,17 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
       if (updatedCounter) {
         onUpdate(id, updatedCounter.value);
       }
+      // Update contribution in localStorage
+      let userContributionsRaw = localStorage.getItem('syncCounterContributions');
+      let userContributions: Record<string, Record<string, number>> = {};
+      if (userContributionsRaw) {
+        try { userContributions = JSON.parse(userContributionsRaw); } catch {}
+      }
+      if (!userContributions[currentUser]) userContributions[currentUser] = {};
+      userContributions[currentUser][id] = (userContributions[currentUser][id] || 0) + 1;
+      localStorage.setItem('syncCounterContributions', JSON.stringify(userContributions));
     } finally {
       setIsLoading(false);
-      // Clear the action indicator after a short delay
       setTimeout(() => setLastAction(null), 1000);
     }
   };
@@ -70,35 +154,74 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
   const handleDecrement = async () => {
     setIsLoading(true);
     setLastAction('decrement');
-    
+    // Ensure username is present
+    currentUser = getOrAskUsername();
+    if (!currentUser) {
+      setIsLoading(false);
+      setLastAction(null);
+      return;
+    }
+    // Prepare contributions object
+    let userContributionsRaw = localStorage.getItem('syncCounterContributions');
+    let userContributions: Record<string, Record<string, number>> = {};
+    if (userContributionsRaw) {
+      try { userContributions = JSON.parse(userContributionsRaw); } catch {}
+    }
+    // If currentUser is not present for this counter, add with 0
+    if (!userContributions[currentUser]) userContributions[currentUser] = {};
+    if (userContributions[currentUser][id] === undefined) userContributions[currentUser][id] = 0;
     if (isOffline) {
       // Handle offline decrement
       const updatedCounter = updateOfflineCounter(id, -1);
       if (updatedCounter) {
         onUpdate(id, updatedCounter.value);
+        // Update contribution in allCounters (frontend)
+        const idx = allCounters.findIndex(c => c.id === id);
+        if (idx !== -1) {
+          const counter = allCounters[idx];
+          if (!counter.contribution) counter.contribution = {};
+          if (counter.contribution[currentUser] === undefined) counter.contribution[currentUser] = 0;
+          counter.contribution[currentUser] -= 1;
+        }
       }
+      userContributions[currentUser][id] -= 1;
+      localStorage.setItem('syncCounterContributions', JSON.stringify(userContributions));
       setIsLoading(false);
       setTimeout(() => setLastAction(null), 1000);
       return;
     }
-
     try {
       const response = await fetch(`/api/counters/${id}/decrement`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, name, value, currentUser })
       });
-      
       if (response.ok) {
         const data = await response.json();
         const updatedCounter = data.counter;
         onUpdate(id, updatedCounter.value);
-        
         // Update local storage with the latest counter values
         const updatedCounters = allCounters.map(counter => 
           counter.id === id ? { ...counter, value: updatedCounter.value } : counter
         );
         saveOfflineCounters(updatedCounters);
+        // Update contribution in allCounters (frontend)
+        const idx = allCounters.findIndex(c => c.id === id);
+        if (idx !== -1) {
+          const counter = allCounters[idx];
+          if (!counter.contribution) counter.contribution = {};
+          if (counter.contribution[currentUser] === undefined) counter.contribution[currentUser] = 0;
+          counter.contribution[currentUser] -= 1;
+        }
+        // Update contribution in localStorage
+        let userContributionsRaw = localStorage.getItem('syncCounterContributions');
+        let userContributions: Record<string, Record<string, number>> = {};
+        if (userContributionsRaw) {
+          try { userContributions = JSON.parse(userContributionsRaw); } catch {}
+        }
+        if (!userContributions[currentUser]) userContributions[currentUser] = {};
+        userContributions[currentUser][id] = (userContributions[currentUser][id] || 0) - 1;
+        localStorage.setItem('syncCounterContributions', JSON.stringify(userContributions));
       }
     } catch (error) {
       console.error('Error decrementing counter:', error);
@@ -107,9 +230,17 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
       if (updatedCounter) {
         onUpdate(id, updatedCounter.value);
       }
+      // Update contribution in localStorage
+      let userContributionsRaw = localStorage.getItem('syncCounterContributions');
+      let userContributions: Record<string, Record<string, number>> = {};
+      if (userContributionsRaw) {
+        try { userContributions = JSON.parse(userContributionsRaw); } catch {}
+      }
+      if (!userContributions[currentUser]) userContributions[currentUser] = {};
+      userContributions[currentUser][id] = (userContributions[currentUser][id] || 0) - 1;
+      localStorage.setItem('syncCounterContributions', JSON.stringify(userContributions));
     } finally {
       setIsLoading(false);
-      // Clear the action indicator after a short delay
       setTimeout(() => setLastAction(null), 1000);
     }
   };
@@ -178,7 +309,6 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
         >
           –
         </button>
-        
         <button
           onClick={handleIncrement}
           disabled={isLoading}
@@ -191,6 +321,32 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
           +
         </button>
       </div>
+
+      {/* User and contribution share display */}
+      {/* Show all user contributions for this counter */}
+      {typeof window !== 'undefined' && allCounters && Array.isArray(allCounters) && (() => {
+        const thisCounter = allCounters.find(c => c.id === id);
+        if (thisCounter && thisCounter.contribution && typeof thisCounter.contribution === 'object') {
+          const entries = Object.entries(thisCounter.contribution);
+          if (entries.length > 0) {
+            return (
+              <div className="mt-6 text-sm text-gray-300 font-medium flex flex-col items-center">
+                <span className="mb-1">Contributions:</span>
+                <ul className="list-none p-0 m-0">
+                  {entries.map(([user, val]) => (
+                    <li key={user} className="mb-1">
+                      <span className="font-semibold text-white">{capitalize(user)}</span>
+                      {': '}
+                      <span className="font-semibold text-blue-400">{String(val)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          }
+        }
+        return null;
+      })()}
       
       {isLoading && (
         <div className="mt-4 text-gray-400 text-sm flex items-center justify-center gap-2">

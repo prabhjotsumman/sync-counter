@@ -7,7 +7,7 @@
   "build": "next build",
   "start": "next start",
   "lint": "next lint",
-  "prod": "env-cmd -f .env.local next start"
+  "prod": "npm run build && env-cmd -f .env.local next start"
   },
   "dependencies": {
     "env-cmd": "^10.1.0",

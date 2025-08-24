@@ -4,6 +4,7 @@ export interface Counter {
   value: number;
   lastUpdated?: number;
   currentUser?: string;
+  contribution?: Record<string, number>;
 }
 
 // Type guard for Counter
@@ -99,7 +100,17 @@ export async function updateCounter(id: string, updates: { name?: string; value?
     const idx = counters.findIndex(c => c.id === id);
     if (idx === -1) return null;
     const now = Date.now();
-    counters[idx] = { ...counters[idx], ...updates, lastUpdated: now };
+    // Update contribution object
+    let contribution = counters[idx].contribution || {};
+    if (currentUser) {
+      if (contribution[currentUser] === undefined) contribution[currentUser] = 0;
+      // Determine increment or decrement
+      if (typeof updates.value === 'number') {
+        const diff = updates.value - counters[idx].value;
+        contribution[currentUser] += diff;
+      }
+    }
+    counters[idx] = { ...counters[idx], ...updates, lastUpdated: now, contribution };
     fs.writeFileSync(dbFile, JSON.stringify(counters, null, 2));
     return counters[idx];
   } else {
