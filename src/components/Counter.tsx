@@ -16,6 +16,7 @@ interface CounterProps {
 }
 
 export default function Counter({ id, name, value, onUpdate, isOffline = false, allCounters = [], isManageMode = false, onEdit, onDelete }: CounterProps) {
+  const currentUser = typeof window !== 'undefined' ? localStorage.getItem('syncCounterUser') : undefined;
   const [isLoading, setIsLoading] = useState(false);
   const [lastAction, setLastAction] = useState<'increment' | 'decrement' | null>(null);
 
@@ -37,6 +38,8 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
     try {
       const response = await fetch(`/api/counters/${id}/increment`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name, value, currentUser })
       });
       
       if (response.ok) {
@@ -82,6 +85,8 @@ export default function Counter({ id, name, value, onUpdate, isOffline = false, 
     try {
       const response = await fetch(`/api/counters/${id}/decrement`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name, value, currentUser })
       });
       
       if (response.ok) {

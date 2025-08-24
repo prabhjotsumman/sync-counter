@@ -7,9 +7,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const body = await request.json();
-    const { name, value } = body;
+  const { id } = await params;
+  const body = await request.json();
+  const { name, value, currentUser } = body;
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json(
@@ -19,7 +19,7 @@ export async function PUT(
     }
 
     // Use Supabase updateCounter for persistence (name and value)
-    const updatedCounter = await updateCounter(id, { name: name.trim(), value });
+  const updatedCounter = await updateCounter(id, { name: name.trim(), value }, currentUser);
     if (!updatedCounter) {
       return NextResponse.json(
         { error: 'Counter not found' },
@@ -50,9 +50,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    // Use Supabase deleteCounter for persistence
-    const deleted = await deleteCounter(id);
+  const { id } = await params;
+  const body = await request.json().catch(() => ({}));
+  const { currentUser } = body;
+  // Use Supabase deleteCounter for persistence
+  const deleted = await deleteCounter(id, currentUser);
     if (!deleted) {
       return NextResponse.json(
         { error: 'Counter not found' },

@@ -21,8 +21,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { name, value = 0 } = body;
+  const body = await request.json();
+  const { name, value = 0, currentUser } = body;
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json(
@@ -35,10 +35,11 @@ export async function POST(request: Request) {
       id: `counter-${Date.now()}`,
       name: name.trim(),
       value: parseInt(value) || 0,
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
+      currentUser
     };
 
-    const created = await addCounter(newCounter);
+  const created = await addCounter(newCounter, currentUser);
 
     const response = {
       counter: created,

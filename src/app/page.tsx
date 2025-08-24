@@ -13,7 +13,7 @@ export interface CounterData {
   value: number;
 }
 
-export default function Home() {
+export default function Page() {
   const [counters, setCounters] = useState<CounterData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,21 @@ export default function Home() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'edit' | 'add'>('add');
   const [editingCounter, setEditingCounter] = useState<CounterData | null>(null);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
   const { isOnline, isOffline, pendingRequests } = useOffline();
+
+  useEffect(() => {
+    let name = localStorage.getItem('syncCounterUser');
+    if (!name) {
+      name = window.prompt('Please enter your name:');
+      if (name && name.trim()) {
+        localStorage.setItem('syncCounterUser', name.trim());
+        setCurrentUser(name.trim());
+      }
+    } else {
+      setCurrentUser(name);
+    }
+  }, []);
 
   // Real-time sync handlers
   const handleCounterCreated = useCallback((counter: CounterData) => {
@@ -196,7 +210,7 @@ export default function Home() {
         const response = await fetch('/api/counters', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(counterData)
+          body: JSON.stringify({ ...counterData, currentUser })
         });
 
         if (response.ok) {
@@ -213,7 +227,7 @@ export default function Home() {
         const response = await fetch(`/api/counters/${counterData.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(counterData)
+          body: JSON.stringify({ ...counterData, currentUser })
         });
 
         if (response.ok) {
@@ -306,6 +320,26 @@ export default function Home() {
           <p className="text-gray-400 text-lg">
             Real-time counters shared across all users
           </p>
+          {currentUser && (
+            <div className="mb-4 text-center flex items-center justify-center gap-2">
+              <span className="text-lg font-semibold text-blue-400">Current User: {currentUser}</span>
+              <button
+                aria-label="Edit name"
+                className="ml-2 p-1 rounded hover:bg-blue-800"
+                onClick={() => {
+                  const newName = window.prompt('Edit your name:', currentUser ?? '');
+                  if (newName && newName.trim()) {
+                    localStorage.setItem('syncCounterUser', newName.trim());
+                    setCurrentUser(newName.trim());
+                  }
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-blue-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 3.487a2.25 2.25 0 113.182 3.182L7.5 19.213l-4.5 1.125 1.125-4.5 12.737-12.351z" />
+                </svg>
+              </button>
+            </div>
+          )}
           
           {/* Connection Status */}
           <div className="mt-4 flex items-center justify-center gap-4">

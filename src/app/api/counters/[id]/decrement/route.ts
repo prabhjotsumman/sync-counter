@@ -7,16 +7,23 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    // Fetch current counter
-    const current = await (await import('@/lib/counters')).getCounter(id);
+  const { id } = await params;
+  const body = await request.json().catch(() => ({}));
+  const { currentUser } = body;
+  // Fetch current counter
+  let current;
+  if (process.env.SYNC_COUNTER_LOCAL_DB_PATH) {
+    current = await (await import('@/lib/counters')).getCounter(id);
+  } else {
+    current = await (await import('@/lib/counters')).getCounter(id, currentUser);
+  }
     if (!current) {
       return NextResponse.json(
         { error: 'Counter not found' },
         { status: 404 }
       );
     }
-    const updatedCounter = await updateCounter(id, { value: current.value - 1 });
+  const updatedCounter = await updateCounter(id, { value: current.value - 1 }, currentUser);
     
     if (!updatedCounter) {
       return NextResponse.json(
