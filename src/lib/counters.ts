@@ -3,7 +3,6 @@ export interface Counter {
   name: string;
   value: number;
   lastUpdated?: number;
-  currentUser?: string;
   contribution?: Record<string, number>;
 }
 
@@ -46,7 +45,7 @@ if (isProd || !isLocal) {
 }
 
 // Get all counters
-export async function getCounters(currentUser?: string): Promise<Counter[]> {
+export async function getCounters(): Promise<Counter[]> {
   if (isLocal && localDbPath) {
     const dbFile = path.resolve(process.cwd(), localDbPath);
     if (!fs.existsSync(dbFile)) return [];
@@ -61,7 +60,7 @@ export async function getCounters(currentUser?: string): Promise<Counter[]> {
 }
 
 // Get a specific counter
-export async function getCounter(id: string, currentUser?: string): Promise<Counter | null> {
+export async function getCounter(id: string): Promise<Counter | null> {
   if (isLocal && localDbPath) {
     const counters = await getCounters();
     return counters.find(c => c.id === id) || null;
@@ -74,7 +73,7 @@ export async function getCounter(id: string, currentUser?: string): Promise<Coun
 }
 
 // Add a new counter
-export async function addCounter(counter: Counter, currentUser?: string): Promise<Counter> {
+export async function addCounter(counter: Counter): Promise<Counter> {
   if (isLocal && localDbPath) {
     const dbFile = path.resolve(process.cwd(), localDbPath);
     const counters = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile, 'utf-8')) : [];
@@ -86,14 +85,16 @@ export async function addCounter(counter: Counter, currentUser?: string): Promis
   } else {
     await ensureCountersTable();
     const now = Date.now();
-    const { data, error } = await supabase!.from('counters').insert([{ ...counter, lastUpdated: now }]).select().single();
+    // Ensure contribution object exists
+    const contribution = counter.contribution && typeof counter.contribution === 'object' ? counter.contribution : {};
+    const { data, error } = await supabase!.from('counters').insert([{ ...counter, lastUpdated: now, contribution }]).select().single();
     if (error || !isCounter(data)) throw error;
     return data as Counter;
   }
 }
 
 // Update a counter's value
-export async function updateCounter(id: string, updates: { name?: string; value?: number }, currentUser?: string): Promise<Counter | null> {
+export async function updateCounter(id: string, updates: { name?: string; value?: number; contribution?: Record<string, number> }): Promise<Counter | null> {
   if (isLocal && localDbPath) {
     const dbFile = path.resolve(process.cwd(), localDbPath);
     const counters: Counter[] = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile, 'utf-8')) : [];
@@ -110,7 +111,10 @@ export async function updateCounter(id: string, updates: { name?: string; value?
     const counter = await getCounter(id);
     if (!counter) return null;
     const now = Date.now();
-    const updateFields: Partial<Counter> = { lastUpdated: now };
+    // Ensure contribution object exists and update if needed
+  const contribution = counter.contribution && typeof counter.contribution === 'object' ? { ...counter.contribution } : {};
+    // Optionally update contribution here if needed (e.g., based on currentUser)
+    const updateFields: Partial<Counter> = { lastUpdated: now, contribution };
     if (typeof updates.value === 'number') updateFields.value = updates.value;
     if (typeof updates.name === 'string') updateFields.name = updates.name;
     const { data, error } = await supabase!.from('counters').update(updateFields).eq('id', id).select().single();
@@ -120,7 +124,7 @@ export async function updateCounter(id: string, updates: { name?: string; value?
 }
 
 // Delete a counter
-export async function deleteCounter(id: string, currentUser?: string): Promise<boolean> {
+export async function deleteCounter(id: string): Promise<boolean> {
   if (isLocal && localDbPath) {
     const dbFile = path.resolve(process.cwd(), localDbPath);
     const counters: Counter[] = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile, 'utf-8')) : [];

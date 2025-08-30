@@ -46,7 +46,6 @@ export function saveOfflineCounters(counters: Counter[], serverSyncTime?: number
     if (serverSyncTime) {
       data.lastServerSync = serverSyncTime;
     }
-    
     localStorage.setItem(COUNTERS_STORAGE_KEY, JSON.stringify(data));
   } catch (error) {
     console.error('Failed to save offline counters:', error);

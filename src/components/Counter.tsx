@@ -10,12 +10,13 @@ interface CounterProps {
   onUpdate: (id: string, newValue: number) => void;
   isOffline?: boolean;
   allCounters?: Array<{ id: string; name: string; value: number; contribution?: Record<string, number> }>;
+  showContribution?: boolean;
   // isManageMode?: boolean; // removed unused
   onEdit?: (counter: { id: string; name: string; value: number }) => void;
   onDelete?: (id: string) => void;
 }
 
-  export default function Counter({ id, name, value, onUpdate, isOffline = false, allCounters = [], onEdit, onDelete }: CounterProps) {
+  export default function Counter({ id, name, value, onUpdate, isOffline = false, allCounters = [], onEdit, onDelete, showContribution = true }: CounterProps) {
   let currentUser = typeof window !== 'undefined' ? localStorage.getItem('syncCounterUser') : undefined;
 
   // Prompt for username if not present
@@ -217,9 +218,8 @@ interface CounterProps {
         </button>
       </div>
 
-      {/* User and contribution share display */}
-      {/* Show all user contributions for this counter */}
-      {typeof window !== 'undefined' && allCounters && Array.isArray(allCounters) && (() => {
+      {/* User and contribution share display (feature flag) */}
+      {showContribution && typeof window !== 'undefined' && allCounters && Array.isArray(allCounters) && (() => {
         const thisCounter = allCounters.find(c => c.id === id);
         if (thisCounter && thisCounter.contribution && typeof thisCounter.contribution === 'object') {
           // Sort entries by descending contribution value

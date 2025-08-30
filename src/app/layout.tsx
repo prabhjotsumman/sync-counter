@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Shared Counters",
+  title: "Counters",
   description: "Real-time shared counters app built with Next.js",
   manifest: "/manifest.json",
 };

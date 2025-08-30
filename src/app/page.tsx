@@ -11,13 +11,15 @@ export interface CounterData {
   id: string;
   name: string;
   value: number;
+  contribution?: Record<string, number>;
 }
 
 export default function Page() {
   const [counters, setCounters] = useState<CounterData[]>([]);
+  // Feature flag for showing contributions (from config file)
+  const [showContribution, setShowContribution] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isManageMode] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'edit' | 'add'>('add');
   const [editingCounter, setEditingCounter] = useState<CounterData | null>(null);
@@ -25,6 +27,14 @@ export default function Page() {
   const { isOnline, isOffline, pendingRequests } = useOffline();
 
   useEffect(() => {
+    // Load feature flag from counterSetting.json
+  fetch('/counterSetting.json')
+      .then(res => res.json())
+      .then(cfg => {
+        if (typeof cfg.SHOW_CONTRIBUTION === 'boolean') {
+          setShowContribution(cfg.SHOW_CONTRIBUTION);
+        }
+      });
     let name = localStorage.getItem('syncCounterUser');
     if (!name) {
       name = window.prompt('Please enter your name:');
@@ -42,11 +52,11 @@ export default function Page() {
     setCounters(prev => {
       // Replace if already present, otherwise add
       if (prev.some(c => c.id === counter.id)) {
-        const newCounters = prev.map(c => c.id === counter.id ? counter : c);
+        const newCounters = prev.map(c => c.id === counter.id ? { ...counter, contribution: counter.contribution || {} } : c);
         saveOfflineCounters(newCounters);
         return newCounters;
       }
-      const newCounters = [...prev, counter];
+      const newCounters = [...prev, { ...counter, contribution: counter.contribution || {} }];
       saveOfflineCounters(newCounters);
       return newCounters;
     });
@@ -54,7 +64,7 @@ export default function Page() {
 
   const handleCounterUpdated = useCallback((counter: CounterData) => {
     setCounters(prev => {
-      const newCounters = prev.map(c => c.id === counter.id ? counter : c);
+      const newCounters = prev.map(c => c.id === counter.id ? { ...counter, contribution: counter.contribution || {} } : c);
       saveOfflineCounters(newCounters);
       return newCounters;
     });
@@ -70,7 +80,7 @@ export default function Page() {
 
   const handleCounterIncremented = useCallback((counter: CounterData) => {
     setCounters(prev => {
-      const newCounters = prev.map(c => c.id === counter.id ? counter : c);
+      const newCounters = prev.map(c => c.id === counter.id ? { ...counter, contribution: counter.contribution || {} } : c);
       saveOfflineCounters(newCounters);
       return newCounters;
     });
@@ -78,7 +88,7 @@ export default function Page() {
 
   const handleCounterDecremented = useCallback((counter: CounterData) => {
     setCounters(prev => {
-      const newCounters = prev.map(c => c.id === counter.id ? counter : c);
+      const newCounters = prev.map(c => c.id === counter.id ? { ...counter, contribution: counter.contribution || {} } : c);
       saveOfflineCounters(newCounters);
       return newCounters;
     });
@@ -316,13 +326,13 @@ export default function Page() {
     <div className="min-h-screen bg-black text-white">
       <div className="container mx-auto px-4 py-12">
         <header className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Shared Counters</h1>
-          <p className="text-gray-400 text-lg">
+          <h1 className="text-4xl font-bold mb-4">Sync Counters</h1>
+          {/* <p className="text-gray-400 text-lg">
             Real-time counters shared across all users
-          </p>
-          {currentUser && (
+          </p> */}
+          {/* {currentUser && (
             <div className="mb-4 text-center flex items-center justify-center gap-2">
-              <span className="text-lg font-semibold text-blue-400">Current User: {currentUser}</span>
+              <span className="text-lg font-semibold text-blue-400">User: {currentUser}</span>
               <button
                 aria-label="Edit name"
                 className="ml-2 p-1 rounded hover:bg-blue-800"
@@ -339,7 +349,7 @@ export default function Page() {
                 </svg>
               </button>
             </div>
-          )}
+          )} */}
           
           {/* Connection Status */}
           <div className="mt-4 flex items-center justify-center gap-4">
@@ -394,27 +404,31 @@ export default function Page() {
               allCounters={counters}
               onEdit={handleEditCounter}
               onDelete={handleDeleteCounter}
+              showContribution={showContribution}
             />
           ))}
         </div>
 
         <div className="text-center mt-12 space-y-4">
-          <div className="flex gap-4 justify-center">
-            <button
-              onClick={handleAddCounter}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors duration-200"
-            >
-              Add New Counter
-            </button>
-            {pendingRequests > 0 && isOnline && (
+          {/* Floating Add Counter Button */}
+          <button
+            onClick={handleAddCounter}
+            className="fixed bottom-8 right-8 z-50 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg w-16 h-16 flex items-center justify-center text-4xl transition-colors duration-200"
+            aria-label="Add Counter"
+          >
+            +
+          </button>
+          {/* Sync Offline Changes button remains in center if needed */}
+          {pendingRequests > 0 && isOnline && (
+            <div className="flex gap-4 justify-center">
               <button
                 onClick={() => syncPendingChangesToServer().then(() => fetchCounters())}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors duration-200"
               >
                 Sync Offline Changes
               </button>
-            )}
-          </div>
+            </div>
+          )}
           
           {isOffline && (
             <div className="text-yellow-400 text-sm">

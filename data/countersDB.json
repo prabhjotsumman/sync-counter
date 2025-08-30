@@ -2,25 +2,12 @@
   {
     "id": "counter-1756056357651",
     "name": "Test",
-    "value": 100005,
-    "lastUpdated": 1756071469060,
+    "value": 1122,
+    "lastUpdated": 1756595584095,
     "contribution": {
       "Prabh": 14,
       "Akash": 6,
       "Dev": 56
-    }
-  },
-  {
-    "id": "counter-1756063714648",
-    "name": "2two",
-    "value": 61,
-    "lastUpdated": 1756068019342,
-    "currentUser": "Prabh",
-    "contribution": {
-      "Prabh": 57,
-      "Param": 23,
-      "Parveen": 16,
-      "Simran": 20
     }
   }
 ]

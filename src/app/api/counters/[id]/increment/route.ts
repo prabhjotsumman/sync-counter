@@ -8,22 +8,18 @@ export async function POST(
 ) {
   try {
   const { id } = await params;
-  const body = await request.json().catch(() => ({}));
-  const { currentUser } = body;
-  // Fetch current counter
-  let current;
-  if (process.env.SYNC_COUNTER_LOCAL_DB_PATH) {
-    current = await (await import('@/lib/counters')).getCounter(id);
-  } else {
-    current = await (await import('@/lib/counters')).getCounter(id, currentUser);
+  const current = await (await import('@/lib/counters')).getCounter(id);
+  if (!current) {
+    return NextResponse.json(
+      { error: 'Counter not found' },
+      { status: 404 }
+    );
   }
-    if (!current) {
-      return NextResponse.json(
-        { error: 'Counter not found' },
-        { status: 404 }
-      );
-    }
-  const updatedCounter = await updateCounter(id, { value: current.value + 1 }, currentUser);
+  // Update contribution object: increment anonymous contribution
+  const contribution = current.contribution && typeof current.contribution === 'object' ? { ...current.contribution } : {};
+  contribution['anonymous'] = (contribution['anonymous'] || 0) + 1;
+  // Save latest value and contribution to DB
+  const updatedCounter = await updateCounter(id, { value: current.value + 1, contribution });
     
     if (!updatedCounter) {
       return NextResponse.json(
@@ -33,7 +29,11 @@ export async function POST(
     }
     
     const response = {
-      counter: updatedCounter,
+      counter: {
+        ...updatedCounter,
+        value: updatedCounter.value,
+        contribution: updatedCounter.contribution,
+      },
       timestamp: Date.now()
     };
     
