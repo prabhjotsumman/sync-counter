@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { updateOfflineCounter, saveOfflineCounters } from '@/lib/offlineStorage';
+import FullScreenCounterModal from './FullScreenCounterModal';
 
 interface CounterProps {
+  setFullscreenOpen?: (open: boolean) => void;
   id: string;
   name: string;
   value: number;
@@ -16,7 +18,25 @@ interface CounterProps {
   onDelete?: (id: string) => void;
 }
 
-  export default function Counter({ id, name, value, onUpdate, isOffline = false, allCounters = [], onEdit, onDelete, showContribution = true }: CounterProps) {
+  export default function Counter({ id, name, value, onUpdate, isOffline = false, allCounters = [], onEdit, onDelete, showContribution = true, setFullscreenOpen }: CounterProps) {
+  const [localFullscreenOpen, setLocalFullscreenOpen] = useState(false);
+  // Sync fullscreen state with parent
+  const handleOpenFullscreen = () => {
+    setLocalFullscreenOpen(true);
+    if (typeof setFullscreenOpen === 'function') {
+      setFullscreenOpen(true);
+    }
+  };
+  const handleCloseFullscreen = () => {
+    setLocalFullscreenOpen(false);
+    if (typeof setFullscreenOpen === 'function') {
+      setFullscreenOpen(false);
+    }
+  };
+  // Handler for increment in fullscreen mode (same as main increment)
+  const handleFullscreenIncrement = () => {
+    handleIncrement();
+  };
   let currentUser = typeof window !== 'undefined' ? localStorage.getItem('syncCounterUser') : undefined;
 
   // Prompt for username if not present
@@ -161,6 +181,17 @@ interface CounterProps {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-semibold text-white">{name}</h3>
         <div className="flex items-center gap-2">
+          {/* Full Screen Button for individual counter */}
+          <button
+            onClick={handleOpenFullscreen}
+            className="bg-gray-900 hover:bg-gray-700 text-white rounded-full shadow-lg w-12 h-12 flex items-center justify-center text-2xl border border-gray-700 transition-colors duration-200"
+            title="Full Screen Mode"
+            style={{ minWidth: 48, minHeight: 48 }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V6a2 2 0 012-2h2m8 0h2a2 2 0 012 2v2m0 8v2a2 2 0 01-2 2h-2m-8 0H6a2 2 0 01-2-2v-2" />
+            </svg>
+          </button>
           {isOffline && (
             <div className="flex items-center gap-1 text-yellow-400 text-xs">
               <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
@@ -170,10 +201,11 @@ interface CounterProps {
           {onEdit && (
             <button
               onClick={() => onEdit({ id, name, value })}
-              className="p-1 text-gray-400 hover:text-white transition-colors duration-200 text-3xl"
+              className="bg-gray-900 hover:bg-gray-700 text-white rounded-full shadow-lg w-12 h-12 flex items-center justify-center text-2xl border border-gray-700 transition-colors duration-200"
               title="Edit counter"
+              style={{ minWidth: 48, minHeight: 48 }}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </button>
@@ -185,10 +217,11 @@ interface CounterProps {
                   onDelete(id);
                 }
               }}
-              className="p-1 text-red-400 hover:text-red-600 transition-colors duration-200 text-3xl"
+              className="bg-gray-900 hover:bg-gray-700 text-red-400 rounded-full shadow-lg w-12 h-12 flex items-center justify-center text-2xl border border-gray-700 transition-colors duration-200"
               title="Delete counter"
+              style={{ minWidth: 48, minHeight: 48 }}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -284,6 +317,14 @@ interface CounterProps {
           {lastAction === 'increment' ? '✓ Incremented' : '✓ Decremented'}
         </div>
       )}
+    {/* Full Screen Counter Modal */}
+    <FullScreenCounterModal
+      name={name}
+      value={value}
+      onIncrement={handleFullscreenIncrement}
+      onClose={handleCloseFullscreen}
+      open={localFullscreenOpen}
+    />
     </div>
   );
 }

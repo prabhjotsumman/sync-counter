@@ -15,6 +15,8 @@ export interface CounterData {
 }
 
 export default function Page() {
+  // Track if any counter is in fullscreen mode
+  const [anyFullscreen, setAnyFullscreen] = useState(false);
   const [counters, setCounters] = useState<CounterData[]>([]);
   // Feature flag for showing contributions (from config file)
   const [showContribution, setShowContribution] = useState<boolean>(true);
@@ -405,19 +407,24 @@ export default function Page() {
               onEdit={handleEditCounter}
               onDelete={handleDeleteCounter}
               showContribution={showContribution}
+              setFullscreenOpen={setAnyFullscreen}
             />
           ))}
+          {/* Add Counter Button below the last counter, centered */}
+          {!anyFullscreen && (
+            <div className="w-full flex justify-center mt-8">
+              <button
+                onClick={handleAddCounter}
+                className="bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg w-16 h-16 flex items-center justify-center text-4xl transition-colors duration-200"
+                aria-label="Add Counter"
+              >
+                +
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="text-center mt-12 space-y-4">
-          {/* Floating Add Counter Button */}
-          <button
-            onClick={handleAddCounter}
-            className="fixed bottom-8 right-8 z-50 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg w-16 h-16 flex items-center justify-center text-4xl transition-colors duration-200"
-            aria-label="Add Counter"
-          >
-            +
-          </button>
           {/* Sync Offline Changes button remains in center if needed */}
           {pendingRequests > 0 && isOnline && (
             <div className="flex gap-4 justify-center">
