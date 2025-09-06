@@ -77,10 +77,15 @@ export function useCountersPageLogic() {
     setIsLoading(false);
   }, []);
 
+  const handleCounterIncremented = useCallback((counter: CounterData) => {
+    setCounters(prev => prev.map(c => c.id === counter.id ? { ...counter } : c));
+  }, []);
+
   const { isConnected } = useRealtimeSync({
     onCounterCreated: handleCounterCreated,
     onCounterUpdated: handleCounterUpdated,
     onCounterDeleted: handleCounterDeleted,
+    onCounterIncremented: handleCounterIncremented,
     onInitialData: handleInitialData,
     isOnline
   });
@@ -103,7 +108,6 @@ export function useCountersPageLogic() {
       const offlineCounters = getOfflineCounters();
       if (offlineCounters.length > 0) {
         setCounters(offlineCounters);
-        setError('Using offline data - no internet connection');
       } else {
         setError('Failed to fetch counters and no offline data available');
       }

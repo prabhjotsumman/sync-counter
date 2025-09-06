@@ -30,12 +30,6 @@ export default function CounterActions({
           <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V6a2 2 0 012-2h2m8 0h2a2 2 0 012 2v2m0 8v2a2 2 0 01-2 2h-2m-8 0H6a2 2 0 01-2-2v-2" />
         </svg>
       </button>
-      {isOffline && (
-        <div className="flex items-center gap-1 text-yellow-400 text-xs">
-          <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-          Offline
-        </div>
-      )}
       {onEdit && (
         <button
           onClick={() => onEdit({ id, name, value })}

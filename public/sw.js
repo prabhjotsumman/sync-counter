@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shared-counter-v1';
+const CACHE_NAME = 'sync-counter-v1';
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
@@ -6,9 +6,14 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll([
         '/',
-        '/api/counters',
-        '/static/js/bundle.js',
-        '/static/css/main.css'
+        '/manifest.json',
+        '/favicon.ico',
+        '/sw.js',
+        '/logo192.png',
+        '/logo512.png',
+        // Next.js static files (adjust as needed)
+        '/_next/static/',
+        // Add more static assets as needed
       ]);
     })
   );
@@ -21,7 +26,17 @@ self.addEventListener('fetch', (event) => {
   } else {
     event.respondWith(
       caches.match(event.request).then((response) => {
-        return response || fetch(event.request);
+        return (
+          response ||
+          fetch(event.request).then((fetchRes) => {
+            return caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, fetchRes.clone());
+              return fetchRes;
+            });
+          }).catch(() => {
+            // Optionally, return a fallback page/image if offline and not cached
+          })
+        );
       })
     );
   }
