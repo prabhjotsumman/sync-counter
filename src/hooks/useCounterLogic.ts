@@ -27,7 +27,7 @@ export function useCounterLogic({ id, name, value, onUpdate, isOffline }: {
   const handleIncrement = async () => {
     setIsLoading(true);
     setLastAction('increment');
-    let currentUser = getOrAskUsername();
+  const currentUser = getOrAskUsername();
     if (!currentUser) {
       setIsLoading(false);
       setLastAction(null);
@@ -53,7 +53,7 @@ export function useCounterLogic({ id, name, value, onUpdate, isOffline }: {
         const updatedCounter = data.counter;
         onUpdate(id, updatedCounter.value);
       }
-    } catch (error) {
+    } catch (_error) {
       const updatedCounter = updateOfflineCounter(id, 1);
       if (updatedCounter) {
         onUpdate(id, updatedCounter.value);
