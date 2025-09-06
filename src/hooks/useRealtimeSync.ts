@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 
-import type { CounterData } from '@/app/page';
+import type { CounterData } from '@/hooks/useCountersPageLogic';
 
 interface SyncEvent {
-  type: 'initial' | 'counter_created' | 'counter_updated' | 'counter_deleted' | 'counter_incremented' | 'counter_decremented';
+  type: 'initial' | 'counter_created' | 'counter_updated' | 'counter_deleted' | 'counter_incremented';
   counter?: CounterData;
   counters?: CounterData[];
   timestamp: number;
@@ -14,7 +14,6 @@ interface UseRealtimeSyncProps {
   onCounterUpdated?: (counter: CounterData) => void;
   onCounterDeleted?: (counter: CounterData) => void;
   onCounterIncremented?: (counter: CounterData) => void;
-  onCounterDecremented?: (counter: CounterData) => void;
   onInitialData?: (counters: CounterData[]) => void;
   isOnline?: boolean;
 }
@@ -24,7 +23,6 @@ export function useRealtimeSync({
   onCounterUpdated,
   onCounterDeleted,
   onCounterIncremented,
-  onCounterDecremented,
   onInitialData,
   isOnline = true
 }: UseRealtimeSyncProps) {
@@ -71,11 +69,6 @@ export function useRealtimeSync({
               callbacks.onCounterIncremented(data.counter);
             }
             break;
-          case 'counter_decremented':
-            if (callbacks.onCounterDecremented && data.counter) {
-              callbacks.onCounterDecremented(data.counter);
-            }
-            break;
         }
       } catch (error) {
         console.error('Error parsing sync event:', error);
@@ -111,7 +104,6 @@ export function useRealtimeSync({
     onCounterUpdated,
     onCounterDeleted,
     onCounterIncremented,
-    onCounterDecremented,
     onInitialData
   });
 
@@ -122,10 +114,9 @@ export function useRealtimeSync({
       onCounterUpdated,
       onCounterDeleted,
       onCounterIncremented,
-      onCounterDecremented,
       onInitialData
     };
-  }, [onCounterCreated, onCounterUpdated, onCounterDeleted, onCounterIncremented, onCounterDecremented, onInitialData]);
+  }, [onCounterCreated, onCounterUpdated, onCounterDeleted, onCounterIncremented, onInitialData]);
 
   return {
     isConnected: !!eventSourceRef.current

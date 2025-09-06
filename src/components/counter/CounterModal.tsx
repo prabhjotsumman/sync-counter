@@ -9,7 +9,6 @@ interface CounterModalProps {
   counter?: Counter | null;
   mode: 'edit' | 'add';
   onSave: (counter: Omit<Counter, 'id'> & { id?: string }) => void;
-  // onDelete?: (id: string) => void; // removed unused
 }
 
 export default function CounterModal({ 
@@ -17,8 +16,7 @@ export default function CounterModal({
   onClose, 
   counter, 
   mode, 
-  onSave, 
-  // onDelete removed
+  onSave
 }: CounterModalProps) {
   const [name, setName] = useState('');
   const [value, setValue] = useState(0);
@@ -56,8 +54,6 @@ export default function CounterModal({
       setIsLoading(false);
     }
   };
-
-  // ...existing code...
 
   if (!isOpen) return null;
 
@@ -104,8 +100,6 @@ export default function CounterModal({
           >
             {isLoading ? 'Saving...' : (mode === 'edit' ? 'Save Changes' : 'Add Counter')}
           </button>
-          
-          {/* Delete button removed from Edit modal */}
           
           <button
             onClick={onClose}

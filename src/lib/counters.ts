@@ -3,7 +3,6 @@ export interface Counter {
   name: string;
   value: number;
   lastUpdated?: number;
-  contribution?: Record<string, number>;
 }
 
 // Type guard for Counter
@@ -85,25 +84,21 @@ export async function addCounter(counter: Counter): Promise<Counter> {
   } else {
     await ensureCountersTable();
     const now = Date.now();
-    // Ensure contribution object exists
-    const contribution = counter.contribution && typeof counter.contribution === 'object' ? counter.contribution : {};
-    const { data, error } = await supabase!.from('counters').insert([{ ...counter, lastUpdated: now, contribution }]).select().single();
+    const { data, error } = await supabase!.from('counters').insert([{ ...counter, lastUpdated: now }]).select().single();
     if (error || !isCounter(data)) throw error;
     return data as Counter;
   }
 }
 
 // Update a counter's value
-export async function updateCounter(id: string, updates: { name?: string; value?: number; contribution?: Record<string, number> }): Promise<Counter | null> {
+export async function updateCounter(id: string, updates: { name?: string; value?: number }): Promise<Counter | null> {
   if (isLocal && localDbPath) {
     const dbFile = path.resolve(process.cwd(), localDbPath);
     const counters: Counter[] = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile, 'utf-8')) : [];
     const idx = counters.findIndex(c => c.id === id);
     if (idx === -1) return null;
     const now = Date.now();
-    // Update contribution object
-    const contribution = counters[idx].contribution || {};
-    counters[idx] = { ...counters[idx], ...updates, lastUpdated: now, contribution };
+    counters[idx] = { ...counters[idx], ...updates, lastUpdated: now };
     fs.writeFileSync(dbFile, JSON.stringify(counters, null, 2));
     return counters[idx];
   } else {
@@ -111,10 +106,7 @@ export async function updateCounter(id: string, updates: { name?: string; value?
     const counter = await getCounter(id);
     if (!counter) return null;
     const now = Date.now();
-    // Ensure contribution object exists and update if needed
-  const contribution = counter.contribution && typeof counter.contribution === 'object' ? { ...counter.contribution } : {};
-    // Optionally update contribution here if needed (e.g., based on currentUser)
-    const updateFields: Partial<Counter> = { lastUpdated: now, contribution };
+    const updateFields: Partial<Counter> = { lastUpdated: now };
     if (typeof updates.value === 'number') updateFields.value = updates.value;
     if (typeof updates.name === 'string') updateFields.name = updates.name;
     const { data, error } = await supabase!.from('counters').update(updateFields).eq('id', id).select().single();

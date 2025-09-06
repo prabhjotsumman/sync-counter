@@ -35,8 +35,7 @@ export async function POST(request: Request) {
       id: `counter-${Date.now()}`,
       name: name.trim(),
       value: parseInt(value) || 0,
-      lastUpdated: Date.now(),
-      contribution: {}
+      lastUpdated: Date.now()
     };
 
   const created = await addCounter(newCounter);

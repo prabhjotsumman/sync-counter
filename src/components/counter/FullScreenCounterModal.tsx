@@ -16,9 +16,6 @@ const FullScreenCounterModal: React.FC<FullScreenCounterModalProps> = ({ name, v
       style={{ minHeight: '100vh', minWidth: '100vw', touchAction: 'manipulation' }}
       onClick={onIncrement}
     >
-      {/* <div className="absolute top-0 left-0 w-full flex justify-center items-center py-6">
-        <span className="text-2xl font-bold tracking-wide text-white drop-shadow-lg">{name}</span>
-      </div> */}
       <div className="flex-1 flex items-center justify-center w-full">
         <span className="text-[7rem] font-extrabold text-white drop-shadow-lg select-none" style={{ letterSpacing: '0.05em' }}>{value}</span>
       </div>

@@ -18,25 +18,24 @@ export async function PUT(
       );
     }
 
-    // Use Supabase updateCounter for persistence (name and value)
-  // Update contribution object: no user tracking
+  // Use Supabase updateCounter for persistence (name and value)
   const updatedCounter = await updateCounter(id, { name: name.trim(), value });
-    if (!updatedCounter) {
-      return NextResponse.json(
-        { error: 'Counter not found' },
-        { status: 404 }
-      );
-    }
-    const response = {
-      counter: { ...updatedCounter, contribution: updatedCounter.contribution || {} },
-      timestamp: Date.now()
-    };
-    broadcastUpdate({
-      type: 'counter_updated',
-      counter: updatedCounter,
-      timestamp: Date.now()
-    });
-    return NextResponse.json(response);
+  if (!updatedCounter) {
+    return NextResponse.json(
+      { error: 'Counter not found' },
+      { status: 404 }
+    );
+  }
+  const response = {
+    counter: updatedCounter,
+    timestamp: Date.now()
+  };
+  broadcastUpdate({
+    type: 'counter_updated',
+    counter: updatedCounter,
+    timestamp: Date.now()
+  });
+  return NextResponse.json(response);
   } catch (error) {
     console.error('Error updating counter:', error);
     return NextResponse.json(

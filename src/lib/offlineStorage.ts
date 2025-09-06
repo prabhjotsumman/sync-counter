@@ -11,7 +11,7 @@ export interface OfflineCounterData {
 
 export interface PendingChange {
   id: string;
-  type: 'increment' | 'decrement' | 'create' | 'update' | 'delete';
+  type: 'increment' | 'create' | 'update' | 'delete';
   timestamp: number;
   delta?: number;
   previousValue?: number;
@@ -102,29 +102,21 @@ export function updateOfflineCounter(id: string, delta: number): Counter | null 
   try {
     const counters = getOfflineCounters();
     const counterIndex = counters.findIndex(c => c.id === id);
-    
-    if (counterIndex === -1) {
-      return null;
-    }
-    
+    if (counterIndex === -1) return null;
     const previousValue = counters[counterIndex].value;
     const newValue = previousValue + delta;
-    
-    // Update the counter
     counters[counterIndex].value = newValue;
-    
-    // Save updated counters
     saveOfflineCounters(counters);
-    
-    // Add pending change with full context
-    addPendingChange({
-      id,
-      type: delta > 0 ? 'increment' : 'decrement',
-      delta,
-      previousValue,
-      newValue
-    });
-    
+    // Only add increment changes
+    if (delta > 0) {
+      addPendingChange({
+        id,
+        type: 'increment',
+        delta,
+        previousValue,
+        newValue
+      });
+    }
     return counters[counterIndex];
   } catch (error) {
     console.error('Failed to update offline counter:', error);
@@ -335,13 +327,10 @@ export async function syncPendingChangesToServer(): Promise<boolean> {
         
         switch (change.type) {
           case 'increment':
-          case 'decrement':
-            const endpoint = change.type === 'increment' ? 'increment' : 'decrement';
-            response = await fetch(`/api/counters/${change.id}/${endpoint}`, {
+            response = await fetch(`/api/counters/${change.id}/increment`, {
               method: 'POST',
             });
             break;
-            
           case 'create':
             response = await fetch('/api/counters', {
               method: 'POST',
@@ -349,7 +338,6 @@ export async function syncPendingChangesToServer(): Promise<boolean> {
               body: JSON.stringify(change.counterData)
             });
             break;
-            
           case 'update':
             response = await fetch(`/api/counters/${change.id}`, {
               method: 'PUT',
@@ -357,13 +345,11 @@ export async function syncPendingChangesToServer(): Promise<boolean> {
               body: JSON.stringify(change.counterData)
             });
             break;
-            
           case 'delete':
             response = await fetch(`/api/counters/${change.id}`, {
               method: 'DELETE'
             });
             break;
-            
           default:
             console.error(`Unknown change type: ${change.type}`);
             return false;

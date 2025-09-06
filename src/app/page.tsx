@@ -1,321 +1,36 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import Counter from '@/components/Counter';
-import CounterModal from '@/components/CounterModal';
-import { useOffline } from '@/hooks/useOffline';
-import { useRealtimeSync } from '@/hooks/useRealtimeSync';
-import { getOfflineCounters, saveOfflineCounters, clearPendingChanges, mergeServerData, syncPendingChangesToServer, addOfflineCounter, updateOfflineCounterData, deleteOfflineCounter } from '@/lib/offlineStorage';
 
-export interface CounterData {
-  id: string;
-  name: string;
-  value: number;
-  contribution?: Record<string, number>;
-}
+import CounterModal from '@/components/counter/CounterModal';
+import { useCountersPageLogic } from '@/hooks/useCountersPageLogic';
+import { StatusHeader } from '@/components/page/StatusHeader';
+import { CounterGrid } from '@/components/page/CounterGrid';
+import { SyncStatus } from '@/components/page/SyncStatus';
 
 export default function Page() {
-  // Track if any counter is in fullscreen mode
-  const [anyFullscreen, setAnyFullscreen] = useState(false);
-  const [counters, setCounters] = useState<CounterData[]>([]);
-  // Feature flag for showing contributions (from config file)
-  const [showContribution, setShowContribution] = useState<boolean>(true);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'edit' | 'add'>('add');
-  const [editingCounter, setEditingCounter] = useState<CounterData | null>(null);
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
-  const { isOnline, isOffline, pendingRequests } = useOffline();
-
-  useEffect(() => {
-    // Load feature flag from counterSetting.json
-  fetch('/counterSetting.json')
-      .then(res => res.json())
-      .then(cfg => {
-        if (typeof cfg.SHOW_CONTRIBUTION === 'boolean') {
-          setShowContribution(cfg.SHOW_CONTRIBUTION);
-        }
-      });
-    let name = localStorage.getItem('syncCounterUser');
-    if (!name) {
-      name = window.prompt('Please enter your name:');
-      if (name && name.trim()) {
-        localStorage.setItem('syncCounterUser', name.trim());
-        setCurrentUser(name.trim());
-      }
-    } else {
-      setCurrentUser(name);
-    }
-  }, []);
-
-  // Real-time sync handlers
-  const handleCounterCreated = useCallback((counter: CounterData) => {
-    setCounters(prev => {
-      // Replace if already present, otherwise add
-      if (prev.some(c => c.id === counter.id)) {
-        const newCounters = prev.map(c => c.id === counter.id ? { ...counter, contribution: counter.contribution || {} } : c);
-        saveOfflineCounters(newCounters);
-        return newCounters;
-      }
-      const newCounters = [...prev, { ...counter, contribution: counter.contribution || {} }];
-      saveOfflineCounters(newCounters);
-      return newCounters;
-    });
-  }, []);
-
-  const handleCounterUpdated = useCallback((counter: CounterData) => {
-    setCounters(prev => {
-      const newCounters = prev.map(c => c.id === counter.id ? { ...counter, contribution: counter.contribution || {} } : c);
-      saveOfflineCounters(newCounters);
-      return newCounters;
-    });
-  }, []);
-
-  const handleCounterDeleted = useCallback((counter: CounterData) => {
-    setCounters(prev => {
-      const newCounters = prev.filter(c => c.id !== counter.id);
-      saveOfflineCounters(newCounters);
-      return newCounters;
-    });
-  }, []);
-
-  const handleCounterIncremented = useCallback((counter: CounterData) => {
-    setCounters(prev => {
-      const newCounters = prev.map(c => c.id === counter.id ? { ...counter, contribution: counter.contribution || {} } : c);
-      saveOfflineCounters(newCounters);
-      return newCounters;
-    });
-  }, []);
-
-  const handleCounterDecremented = useCallback((counter: CounterData) => {
-    setCounters(prev => {
-      const newCounters = prev.map(c => c.id === counter.id ? { ...counter, contribution: counter.contribution || {} } : c);
-      saveOfflineCounters(newCounters);
-      return newCounters;
-    });
-  }, []);
-
-  const handleInitialData = useCallback((counters: CounterData[]) => {
-    setCounters(counters);
-    saveOfflineCounters(counters);
-    setIsLoading(false);
-  }, []);
-
-  // Initialize real-time sync
-  const { isConnected } = useRealtimeSync({
-    onCounterCreated: handleCounterCreated,
-    onCounterUpdated: handleCounterUpdated,
-    onCounterDeleted: handleCounterDeleted,
-    onCounterIncremented: handleCounterIncremented,
-    onCounterDecremented: handleCounterDecremented,
-    onInitialData: handleInitialData,
-    isOnline
-  });
-
-  const fetchCounters = async () => {
-    try {
-      const response = await fetch('/api/counters');
-      if (response.ok) {
-        const data = await response.json();
-        const serverCounters = data.counters;
-        const serverTimestamp = data.timestamp;
-        
-        // Merge server data with local changes
-        const mergedCounters = mergeServerData(serverCounters);
-        setCounters(mergedCounters);
-        
-        // Save the merged data with server timestamp
-        saveOfflineCounters(mergedCounters, serverTimestamp);
-        
-        // Clear pending changes that have been synced
-        clearPendingChanges();
-      } else {
-        throw new Error('Failed to fetch counters');
-      }
-    } catch (error) {
-      console.error('Network error, using offline data:', error);
-      // Use offline data if available
-      const offlineCounters = getOfflineCounters();
-      if (offlineCounters.length > 0) {
-        setCounters(offlineCounters);
-        setError('Using offline data - no internet connection');
-      } else {
-        setError('Failed to fetch counters and no offline data available');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    // Only fetch counters if not using real-time sync
-    if (!isConnected) {
-      fetchCounters();
-    }
-  }, [isConnected]);
-
-  // Sync offline data when coming back online
-  useEffect(() => {
-    if (isOnline && pendingRequests > 0) {
-      // First sync pending changes to server
-      syncPendingChangesToServer().then((success) => {
-        if (success) {
-          // Then fetch fresh data from server
-          fetchCounters();
-        } else {
-          console.error('Failed to sync pending changes');
-        }
-      });
-    }
-  }, [isOnline, pendingRequests]);
-
-  const handleCounterUpdate = (id: string, newValue: number) => {
-    setCounters(prev => 
-      prev.map(counter => 
-        counter.id === id ? { ...counter, value: newValue } : counter
-      )
-    );
-  };
-
-  const handleEditCounter = (counter: CounterData) => {
-    setEditingCounter(counter);
-    setModalMode('edit');
-    setModalOpen(true);
-  };
-
-  const handleAddCounter = () => {
-    setEditingCounter(null);
-    setModalMode('add');
-    setModalOpen(true);
-  };
-
-  const handleSaveCounter = async (counterData: { id?: string; name: string; value: number }) => {
-    try {
-      if (isOffline) {
-        // Handle offline operations
-        if (modalMode === 'add') {
-          const newCounter = addOfflineCounter(counterData);
-          if (newCounter) {
-            setCounters(prev => {
-              // Only add if not already present (by id)
-              if (prev.some(c => c.id === newCounter.id)) return prev;
-              return [...prev, newCounter];
-            });
-          }
-        } else {
-          const updatedCounter = updateOfflineCounterData(counterData.id!, counterData);
-          if (updatedCounter) {
-            setCounters(prev => 
-              prev.map(counter => 
-                counter.id === counterData.id ? updatedCounter : counter
-              )
-            );
-          }
-        }
-        return;
-      }
-
-      // Online operations
-      if (modalMode === 'add') {
-        // Create new counter
-        const response = await fetch('/api/counters', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...counterData, currentUser })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setCounters(prev => {
-            // Only add if not already present (by id)
-            if (prev.some(c => c.id === data.counter.id)) return prev;
-            return [...prev, data.counter];
-          });
-          saveOfflineCounters([...counters, data.counter]);
-        }
-      } else {
-        // Update existing counter
-        const response = await fetch(`/api/counters/${counterData.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...counterData, currentUser })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setCounters(prev => 
-            prev.map(counter => 
-              counter.id === counterData.id ? data.counter : counter
-            )
-          );
-          saveOfflineCounters(counters.map(counter => 
-            counter.id === counterData.id ? data.counter : counter
-          ));
-        }
-      }
-    } catch (error) {
-      console.error('Failed to save counter:', error);
-      // Fallback to offline mode if network fails
-      if (modalMode === 'add') {
-        const newCounter = addOfflineCounter(counterData);
-        if (newCounter) {
-          setCounters(prev => {
-            if (prev.some(c => c.id === newCounter.id)) return prev;
-            return [...prev, newCounter];
-          });
-        }
-      } else {
-        const updatedCounter = updateOfflineCounterData(counterData.id!, counterData);
-        if (updatedCounter) {
-          setCounters(prev => 
-            prev.map(counter => 
-              counter.id === counterData.id ? updatedCounter : counter
-            )
-          );
-        }
-      }
-    }
-  };
-
-  const handleDeleteCounter = async (id: string) => {
-    try {
-      if (isOffline) {
-        // Handle offline deletion
-        const success = deleteOfflineCounter(id);
-        if (success) {
-          setCounters(prev => prev.filter(counter => counter.id !== id));
-        }
-        return;
-      }
-
-      // Online deletion
-      const response = await fetch(`/api/counters/${id}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        setCounters(prev => prev.filter(counter => counter.id !== id));
-        saveOfflineCounters(counters.filter(counter => counter.id !== id));
-      }
-    } catch (error) {
-      console.error('Failed to delete counter:', error);
-      // Fallback to offline mode if network fails
-      const success = deleteOfflineCounter(id);
-      if (success) {
-        setCounters(prev => prev.filter(counter => counter.id !== id));
-      }
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white text-xl">Loading counters...</div>
-      </div>
-    );
-  }
-
+  const {
+    anyFullscreen,
+    setAnyFullscreen,
+    counters,
+    error,
+    modalOpen,
+    setModalOpen,
+    modalMode,
+    setModalMode,
+    editingCounter,
+    setEditingCounter,
+    isOnline,
+    isOffline,
+    pendingRequests,
+    isConnected,
+    handleCounterUpdate,
+    handleEditCounter,
+    handleAddCounter,
+    handleSaveCounter,
+    handleDeleteCounter,
+    fetchCounters,
+    syncPendingChangesToServer
+  } = useCountersPageLogic();
   if (error) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -327,137 +42,32 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="container mx-auto px-4 py-12">
-        <header className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Sync Counters</h1>
-          {/* <p className="text-gray-400 text-lg">
-            Real-time counters shared across all users
-          </p> */}
-          {/* {currentUser && (
-            <div className="mb-4 text-center flex items-center justify-center gap-2">
-              <span className="text-lg font-semibold text-blue-400">User: {currentUser}</span>
-              <button
-                aria-label="Edit name"
-                className="ml-2 p-1 rounded hover:bg-blue-800"
-                onClick={() => {
-                  const newName = window.prompt('Edit your name:', currentUser ?? '');
-                  if (newName && newName.trim()) {
-                    localStorage.setItem('syncCounterUser', newName.trim());
-                    setCurrentUser(newName.trim());
-                  }
-                }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-blue-400">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 3.487a2.25 2.25 0 113.182 3.182L7.5 19.213l-4.5 1.125 1.125-4.5 12.737-12.351z" />
-                </svg>
-              </button>
-            </div>
-          )} */}
-          
-          {/* Connection Status */}
-          <div className="mt-4 flex items-center justify-center gap-4">
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-              isOnline 
-                ? 'bg-green-900 text-green-300' 
-                : 'bg-yellow-900 text-yellow-300'
-            }`}>
-              <div className={`w-2 h-2 rounded-full ${
-                isOnline ? 'bg-green-400' : 'bg-yellow-400'
-              }`}></div>
-              {isOnline ? 'Online' : 'Offline'}
-            </div>
-            {/* Local badge if running in local mode */}
-            {typeof process !== 'undefined' && process.env.NODE_ENV === 'development' && (
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full text-sm bg-blue-900 text-blue-300">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                <span>Local</span>
-              </div>
-            )}
-            {isOnline && (
-              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-                isConnected 
-                  ? 'bg-purple-900 text-purple-300' 
-                  : 'bg-gray-700 text-gray-300'
-              }`}>
-                <div className={`w-2 h-2 rounded-full ${
-                  isConnected ? 'bg-purple-400' : 'bg-gray-400'
-                } ${isConnected ? 'animate-pulse' : ''}`}></div>
-                {isConnected ? 'Real-time Sync' : 'Connecting...'}
-              </div>
-            )}
-            
-            {pendingRequests > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full text-sm bg-blue-900 text-blue-300">
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                {pendingRequests} pending
-              </div>
-            )}
-          </div>
-        </header>
+        <StatusHeader isOnline={isOnline} isConnected={isConnected} pendingRequests={pendingRequests} />
+        <CounterGrid
+          counters={counters}
+          anyFullscreen={anyFullscreen}
+          setAnyFullscreen={setAnyFullscreen}
+          isOffline={isOffline}
+          handleCounterUpdate={handleCounterUpdate}
+          handleEditCounter={handleEditCounter}
+          handleDeleteCounter={handleDeleteCounter}
+          handleAddCounter={handleAddCounter}
+        />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {counters.map((counter) => (
-            <Counter
-              key={counter.id}
-              id={counter.id}
-              name={counter.name}
-              value={counter.value}
-              onUpdate={handleCounterUpdate}
-              isOffline={isOffline}
-              allCounters={counters}
-              onEdit={handleEditCounter}
-              onDelete={handleDeleteCounter}
-              showContribution={showContribution}
-              setFullscreenOpen={setAnyFullscreen}
-            />
-          ))}
-          {/* Add Counter Button below the last counter, centered */}
-          {!anyFullscreen && (
-            <div className="w-full flex justify-center mt-8">
-              <button
-                onClick={handleAddCounter}
-                className="bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg w-16 h-16 flex items-center justify-center text-4xl transition-colors duration-200"
-                aria-label="Add Counter"
-              >
-                +
-              </button>
-            </div>
-          )}
-        </div>
+        <SyncStatus
+          pendingRequests={pendingRequests}
+          isOnline={isOnline}
+          isOffline={isOffline}
+          syncPendingChangesToServer={syncPendingChangesToServer}
+          fetchCounters={fetchCounters}
+        />
 
-        <div className="text-center mt-12 space-y-4">
-          {/* Sync Offline Changes button remains in center if needed */}
-          {pendingRequests > 0 && isOnline && (
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={() => syncPendingChangesToServer().then(() => fetchCounters())}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors duration-200"
-              >
-                Sync Offline Changes
-              </button>
-            </div>
-          )}
-          
-          {isOffline && (
-            <div className="text-yellow-400 text-sm">
-              You&apos;re offline. Changes will be synced when you&apos;re back online.
-            </div>
-          )}
-          
-          {pendingRequests > 0 && isOnline && (
-            <div className="text-blue-400 text-sm">
-              Syncing {pendingRequests} offline changes...
-            </div>
-          )}
-        </div>
-        
-        {/* Counter Modal */}
         <CounterModal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           counter={editingCounter}
           mode={modalMode}
           onSave={handleSaveCounter}
-          // onDelete removed
         />
       </div>
     </div>

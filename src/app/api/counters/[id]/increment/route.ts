@@ -15,36 +15,24 @@ export async function POST(
       { status: 404 }
     );
   }
-  // Update contribution object: increment anonymous contribution
-  const contribution = current.contribution && typeof current.contribution === 'object' ? { ...current.contribution } : {};
-  contribution['anonymous'] = (contribution['anonymous'] || 0) + 1;
-  // Save latest value and contribution to DB
-  const updatedCounter = await updateCounter(id, { value: current.value + 1, contribution });
-    
-    if (!updatedCounter) {
-      return NextResponse.json(
-        { error: 'Counter not found' },
-        { status: 404 }
-      );
-    }
-    
-    const response = {
-      counter: {
-        ...updatedCounter,
-        value: updatedCounter.value,
-        contribution: updatedCounter.contribution,
-      },
-      timestamp: Date.now()
-    };
-    
-    // Broadcast the updated counter to all connected clients
-    broadcastUpdate({
-      type: 'counter_incremented',
-      counter: updatedCounter,
-      timestamp: Date.now()
-    });
-    
-    return NextResponse.json(response);
+  // Increment value only, no contribution logic
+  const updatedCounter = await updateCounter(id, { value: current.value + 1 });
+  if (!updatedCounter) {
+    return NextResponse.json(
+      { error: 'Counter not found' },
+      { status: 404 }
+    );
+  }
+  const response = {
+    counter: updatedCounter,
+    timestamp: Date.now()
+  };
+  broadcastUpdate({
+    type: 'counter_incremented',
+    counter: updatedCounter,
+    timestamp: Date.now()
+  });
+  return NextResponse.json(response);
   } catch (error) {
     console.error('Error incrementing counter:', error);
     return NextResponse.json(
