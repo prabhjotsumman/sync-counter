@@ -7,9 +7,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-  const { id } = await params;
-  const body = await request.json();
-  const { name, value } = body;
+    const { id } = await params;
+    const body = await request.json();
+  const { name, value, dailyGoal, dailyCount, history, currentUser } = body;
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json(
@@ -18,24 +18,30 @@ export async function PUT(
       );
     }
 
-  // Use Supabase updateCounter for persistence (name and value)
-  const updatedCounter = await updateCounter(id, { name: name.trim(), value });
-  if (!updatedCounter) {
-    return NextResponse.json(
-      { error: 'Counter not found' },
-      { status: 404 }
-    );
-  }
-  const response = {
-    counter: updatedCounter,
-    timestamp: Date.now()
-  };
-  broadcastUpdate({
-    type: 'counter_updated',
-    counter: updatedCounter,
-    timestamp: Date.now()
-  });
-  return NextResponse.json(response);
+    // Use Supabase updateCounter for persistence (name, value, dailyGoal)
+  const updateFields: Record<string, string | number> = { name: name.trim(), value };
+  if (typeof dailyGoal === 'number') updateFields.dailyGoal = dailyGoal;
+  if (typeof dailyCount === 'number') updateFields.dailyCount = dailyCount;
+  if (history && typeof history === 'object') updateFields.history = history;
+  const updatedCounter = await updateCounter(id, updateFields);
+    if (!updatedCounter) {
+      return NextResponse.json(
+        { error: 'Counter not found' },
+        { status: 404 }
+      );
+    }
+    // Optionally update local DB if running locally (handled in updateCounter)
+    const response = {
+      counter: updatedCounter,
+      timestamp: Date.now()
+    };
+    broadcastUpdate({
+      type: 'counter_updated',
+      counter: updatedCounter,
+      timestamp: Date.now(),
+      user: currentUser || null
+    });
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error updating counter:', error);
     return NextResponse.json(
@@ -50,10 +56,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-  const { id } = await params;
-  // const body = await request.json().catch(() => ({})); // removed unused
-  // Use Supabase deleteCounter for persistence
-  const deleted = await deleteCounter(id);
+    const { id } = await params;
+    // const body = await request.json().catch(() => ({})); // removed unused
+    // Use Supabase deleteCounter for persistence
+    const deleted = await deleteCounter(id);
     if (!deleted) {
       return NextResponse.json(
         { error: 'Counter not found' },

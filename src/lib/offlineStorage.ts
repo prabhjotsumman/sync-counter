@@ -98,14 +98,24 @@ export function clearPendingChanges(): void {
 }
 
 // Update a counter locally with proper timestamp tracking
-export function updateOfflineCounter(id: string, delta: number): Counter | null {
+export function updateOfflineCounter(id: string, delta: number, today?: string): Counter | null {
   try {
     const counters = getOfflineCounters();
     const counterIndex = counters.findIndex(c => c.id === id);
     if (counterIndex === -1) return null;
-    const previousValue = counters[counterIndex].value;
+    const counter = counters[counterIndex];
+    const previousValue = counter.value;
     const newValue = previousValue + delta;
-    counters[counterIndex].value = newValue;
+    counter.value = newValue;
+    // Daily count logic
+    const dateKey = today || new Date().toISOString().slice(0, 10);
+    if (!counter.history) counter.history = {};
+    if (!counter.history[dateKey]) {
+      counter.history[dateKey] = { totalCount: 0, countedToday: 0, previousCount: [] };
+    }
+    counter.history[dateKey].totalCount += delta;
+    counter.history[dateKey].countedToday += delta;
+    counter.dailyCount = counter.history[dateKey].countedToday;
     saveOfflineCounters(counters);
     // Only add increment changes
     if (delta > 0) {
@@ -117,7 +127,7 @@ export function updateOfflineCounter(id: string, delta: number): Counter | null 
         newValue
       });
     }
-    return counters[counterIndex];
+    return counter;
   } catch (error) {
     console.error('Failed to update offline counter:', error);
     return null;
@@ -160,30 +170,28 @@ export function updateOfflineCounterData(id: string, counterData: Omit<Counter, 
   try {
     const counters = getOfflineCounters();
     const counterIndex = counters.findIndex(c => c.id === id);
-    
     if (counterIndex === -1) {
       return null;
     }
-    
     const updatedCounter = {
       ...counters[counterIndex],
       ...counterData,
       lastUpdated: Date.now()
     };
-    
     counters[counterIndex] = updatedCounter;
     saveOfflineCounters(counters);
-    
-    // Add pending change for update
+    // Add pending change for update (include all fields)
     addPendingChange({
       id,
       type: 'update',
       counterData: {
         name: updatedCounter.name,
-        value: updatedCounter.value
+        value: updatedCounter.value,
+        dailyGoal: updatedCounter.dailyGoal,
+        dailyCount: updatedCounter.dailyCount,
+        history: updatedCounter.history
       }
     });
-    
     return updatedCounter;
   } catch (error) {
     console.error('Failed to update offline counter data:', error);

@@ -2,10 +2,10 @@
   {
     "id": "counter-1756056357651",
     "name": "Test",
-    "value": 100041,
-    "lastUpdated": 1757200722854,
-    "dailyGoal": 600,
-    "dailyCount": 33,
+    "value": 10672,
+    "lastUpdated": 1757273645605,
+    "dailyGoal": 605,
+    "dailyCount": 600,
     "contribution": {
       "Prabh": 14,
       "Akash": 6,
@@ -16,6 +16,16 @@
       "TU_1": {
         "totalCount": 33,
         "countedToday": 33,
+        "previousCount": []
+      },
+      "2025-09-06": {
+        "totalCount": 14,
+        "countedToday": 14,
+        "previousCount": []
+      },
+      "2025-09-07": {
+        "totalCount": 600,
+        "countedToday": 600,
         "previousCount": []
       }
     }

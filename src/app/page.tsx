@@ -12,13 +12,10 @@ export default function Page() {
     anyFullscreen,
     setAnyFullscreen,
     counters,
-    error,
     modalOpen,
     setModalOpen,
-    modalMode,
-    setModalMode,
-    editingCounter,
-    setEditingCounter,
+  modalMode,
+  editingCounter,
     isOnline,
     isOffline,
     pendingRequests,
@@ -31,13 +28,6 @@ export default function Page() {
     fetchCounters,
     syncPendingChangesToServer
   } = useCountersPageLogic();
-  if (error) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-red-400 text-xl">{error}</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-black text-white">

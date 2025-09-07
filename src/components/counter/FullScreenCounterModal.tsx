@@ -1,14 +1,18 @@
-import React from 'react';
+
+import ProgressBar from './ProgressBar';
 
 interface FullScreenCounterModalProps {
   name: string;
   value: number;
+  dailyGoal?: number;
+  dailyCount?: number;
   onIncrement: () => void;
   onClose: () => void;
   open: boolean;
 }
 
-const FullScreenCounterModal: React.FC<FullScreenCounterModalProps> = ({ name, value, onIncrement, onClose, open }) => {
+
+const FullScreenCounterModal: React.FC<FullScreenCounterModalProps> = ({ name, value, dailyGoal, dailyCount, onIncrement, onClose, open }) => {
   if (!open) return null;
   return (
     <div
@@ -16,7 +20,13 @@ const FullScreenCounterModal: React.FC<FullScreenCounterModalProps> = ({ name, v
       style={{ minHeight: '100vh', minWidth: '100vw', touchAction: 'manipulation' }}
       onClick={onIncrement}
     >
-      <div className="flex-1 flex items-center justify-center w-full">
+      {/* Progress bar in top-right corner (absolute) */}
+      {typeof dailyGoal === 'number' && dailyGoal > 0 && (
+        <div className="absolute top-0 right-0 w-full max-w-full z-10">
+          <ProgressBar counterName={name} value={dailyCount || 0} max={dailyGoal} />
+        </div>
+      )}
+      <div className="flex-1 flex flex-col items-center justify-center w-full">
         <span className="text-[7rem] font-extrabold text-white drop-shadow-lg select-none" style={{ letterSpacing: '0.05em' }}>{value}</span>
       </div>
       {/* Floating close button */}

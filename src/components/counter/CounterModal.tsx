@@ -11,15 +11,17 @@ interface CounterModalProps {
   onSave: (counter: Omit<Counter, 'id'> & { id?: string }) => void;
 }
 
-export default function CounterModal({ 
-  isOpen, 
-  onClose, 
-  counter, 
-  mode, 
-  onSave
+export default function CounterModal({
+  isOpen,
+  onClose,
+  counter,
+  mode,
+  onSave,
+  // onDelete removed
 }: CounterModalProps) {
   const [name, setName] = useState('');
   const [value, setValue] = useState(0);
+  const [dailyGoal, setDailyGoal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -27,9 +29,11 @@ export default function CounterModal({
       if (mode === 'edit' && counter) {
         setName(counter.name);
         setValue(counter.value);
+        setDailyGoal(counter.dailyGoal || 0);
       } else {
         setName('');
         setValue(0);
+        setDailyGoal(0);
       }
     }
   }, [isOpen, mode, counter]);
@@ -45,7 +49,8 @@ export default function CounterModal({
       await onSave({
         id: counter?.id,
         name: name.trim(),
-        value: value
+        value: value,
+        dailyGoal: dailyGoal
       });
       onClose();
     } catch (error) {
@@ -63,7 +68,7 @@ export default function CounterModal({
         <h2 className="text-2xl font-bold text-white mb-6">
           {mode === 'edit' ? 'Edit Counter' : 'Add New Counter'}
         </h2>
-        
+
         <div className="space-y-4">
           <div>
             <label className="block text-white text-sm font-medium mb-2">
@@ -77,7 +82,7 @@ export default function CounterModal({
               placeholder="Enter counter name"
             />
           </div>
-          
+
           <div>
             <label className="block text-white text-sm font-medium mb-2">
               Initial Value
@@ -90,8 +95,20 @@ export default function CounterModal({
               placeholder="0"
             />
           </div>
+          <div>
+            <label className="block text-white text-sm font-medium mb-2">
+              Daily Goal
+            </label>
+            <input
+              type="number"
+              value={dailyGoal}
+              onChange={(e) => setDailyGoal(parseInt(e.target.value) || 0)}
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              placeholder="Enter daily goal (optional)"
+            />
+          </div>
         </div>
-        
+
         <div className="flex gap-3 mt-8">
           <button
             onClick={handleSave}
@@ -100,7 +117,7 @@ export default function CounterModal({
           >
             {isLoading ? 'Saving...' : (mode === 'edit' ? 'Save Changes' : 'Add Counter')}
           </button>
-          
+
           <button
             onClick={onClose}
             disabled={isLoading}

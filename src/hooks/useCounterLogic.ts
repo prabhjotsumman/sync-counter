@@ -1,3 +1,4 @@
+import type { Counter } from "../lib/counters";
 import { useState } from 'react';
 import { updateOfflineCounter } from '@/lib/offlineStorage';
 
@@ -5,7 +6,7 @@ export function useCounterLogic({ id, name, value, onUpdate, isOffline }: {
   id: string;
   name: string;
   value: number;
-  onUpdate: (id: string, newValue: number) => void;
+  onUpdate: (id: string, updatedCounter: Counter) => void;
   isOffline?: boolean;
 }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -27,16 +28,18 @@ export function useCounterLogic({ id, name, value, onUpdate, isOffline }: {
   const handleIncrement = async () => {
     setIsLoading(true);
     setLastAction('increment');
-  const currentUser = getOrAskUsername();
+    const currentUser = getOrAskUsername();
     if (!currentUser) {
       setIsLoading(false);
       setLastAction(null);
       return;
     }
+    // Get today's date string
+    const today = new Date().toISOString().slice(0, 10);
     if (isOffline) {
-      const updatedCounter = updateOfflineCounter(id, 1);
+      const updatedCounter = updateOfflineCounter(id, 1, today);
       if (updatedCounter) {
-        onUpdate(id, updatedCounter.value);
+        onUpdate(id, updatedCounter);
       }
       setIsLoading(false);
       setTimeout(() => setLastAction(null), 1000);
@@ -46,17 +49,17 @@ export function useCounterLogic({ id, name, value, onUpdate, isOffline }: {
       const response = await fetch(`/api/counters/${id}/increment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, name, value, currentUser })
+        body: JSON.stringify({ id, name, value, currentUser, today })
       });
       if (response.ok) {
         const data = await response.json();
         const updatedCounter = data.counter;
-        onUpdate(id, updatedCounter.value);
+        onUpdate(id, updatedCounter);
       }
-    } catch (_error) {
-      const updatedCounter = updateOfflineCounter(id, 1);
+  } catch {
+      const updatedCounter = updateOfflineCounter(id, 1, today);
       if (updatedCounter) {
-        onUpdate(id, updatedCounter.value);
+        onUpdate(id, updatedCounter);
       }
     } finally {
       setIsLoading(false);
