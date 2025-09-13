@@ -1,32 +1,40 @@
 [
   {
-    "id": "counter-1756056357651",
-    "name": "Test",
-    "value": 10672,
-    "lastUpdated": 1757273645605,
-    "dailyGoal": 605,
-    "dailyCount": 600,
-    "contribution": {
-      "Prabh": 14,
-      "Akash": 6,
-      "Dev": 56,
-      "anonymous": 15
+    "id": "counter-999",
+    "name": "Jaap",
+    "value": 10135,
+    "lastUpdated": 1757759327585,
+    "users": {
+      "Simran": 12,
+      "Prabhjot": 4,
+      "Param": 2,
+      "Navi": 1,
+      "Prabh": 120
     },
+    "dailyCount": 120,
+    "dailyGoal": 150,
     "history": {
-      "TU_1": {
-        "totalCount": 33,
-        "countedToday": 33,
-        "previousCount": []
-      },
-      "2025-09-06": {
-        "totalCount": 14,
-        "countedToday": 14,
-        "previousCount": []
+      "04-09-2025": {
+        "users": {
+          "Prabhjot": 7,
+          "Simran": 5
+        },
+        "total": 12
       },
       "2025-09-07": {
-        "totalCount": 600,
-        "countedToday": 600,
-        "previousCount": []
+        "users": {
+          "Prabhjot": 4,
+          "Param": 2,
+          "Navi": 1
+        },
+        "total": 7
+      },
+      "2025-09-13": {
+        "users": {
+          "Prabh": 120
+        },
+        "total": 120,
+        "day": "Friday"
       }
     }
   }

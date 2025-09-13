@@ -22,28 +22,40 @@ export interface CounterData {
     history?: Counter['history'];
 }
 
-export function useCountersPageLogic() {
-    const [anyFullscreen, setAnyFullscreen] = useState(false);
+    
+export function useCountersPageLogic() {const [anyFullscreen, setAnyFullscreen] = useState(false);
     const [counters, setCounters] = useState<CounterData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'edit' | 'add'>('add');
     const [editingCounter, setEditingCounter] = useState<CounterData | null>(null);
     const [currentUser, setCurrentUser] = useState<string | null>(null);
+    const [showUsernameModal, setShowUsernameModal] = useState(false);
     const { isOnline, isOffline, pendingRequests } = useOffline();
+    const [wasOnline, setWasOnline] = useState(true);
 
     useEffect(() => {
         let name = localStorage.getItem('syncCounterUser');
         if (!name) {
-            name = window.prompt('Please enter your name:');
-            if (name && name.trim()) {
-                localStorage.setItem('syncCounterUser', name.trim());
-                setCurrentUser(name.trim());
-            }
+            setShowUsernameModal(true);
         } else {
+            // Normalize user name: first letter capital, rest lowercase
+            name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+            localStorage.setItem('syncCounterUser', name);
             setCurrentUser(name);
         }
     }, []);
+
+    const handleUsernameSubmit = (name: string) => {
+        if (name && name.trim()) {
+            // Normalize user name: first letter capital, rest lowercase
+            name = name.trim();
+            name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+            localStorage.setItem('syncCounterUser', name);
+            setCurrentUser(name);
+            setShowUsernameModal(false);
+        }
+    };
 
     const handleCounterCreated = useCallback((counter: CounterData) => {
         setCounters(prev => {
@@ -124,6 +136,15 @@ export function useCountersPageLogic() {
             fetchCounters();
         }
     }, [isConnected]);
+
+    // When going from online to offline, update offline storage with latest counters
+    useEffect(() => {
+        if (!isOnline && wasOnline) {
+            // Save the latest counters to offline storage
+            saveOfflineCounters(counters);
+        }
+        setWasOnline(isOnline);
+    }, [isOnline]);
 
     useEffect(() => {
         if (isOnline && pendingRequests > 0) {
@@ -279,6 +300,8 @@ export function useCountersPageLogic() {
         handleSaveCounter,
         handleDeleteCounter,
         fetchCounters,
-        syncPendingChangesToServer: async () => { await syncPendingChangesToServer(); }
+        syncPendingChangesToServer: async () => { await syncPendingChangesToServer(); },
+        showUsernameModal,
+        handleUsernameSubmit
     };
 }

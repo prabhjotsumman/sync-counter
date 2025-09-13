@@ -8,27 +8,44 @@ export async function POST(
 ) {
   try {
   const { id } = await params;
-  const { today } = await request.json();
+  const { today, currentUser } = await request.json();
+  // Normalize user name: first letter capital, rest lowercase
+  const normalizedUser = currentUser ? currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase() : undefined;
   const current = await (await import('@/lib/counters')).getCounter(id);
   if (!current) {
-    return NextResponse.json(
-      { error: 'Counter not found' },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: 'Counter not found' }, { status: 404 });
   }
-  // Daily count/history logic
-  const dateKey = today || new Date().toISOString().slice(0, 10);
+  // Date key in DD-MM-YYYY format
+  const dateKey = today || new Date().toLocaleDateString('en-GB').split('/').join('-');
   const history = current.history || {};
-  if (!history[dateKey]) {
-    history[dateKey] = { totalCount: 0, countedToday: 0, previousCount: [] };
+  const users = { ...(current.users || {}) };
+  // Update today's user count
+  if (normalizedUser) {
+    users[normalizedUser] = (users[normalizedUser] || 0) + 1;
   }
-  history[dateKey].totalCount += 1;
-  history[dateKey].countedToday += 1;
-  const dailyCount = history[dateKey].countedToday;
+  // Update history for today
+  const todayDate = today ? new Date(today) : new Date();
+  const dayName = todayDate.toLocaleDateString('en-US', { weekday: 'long' });
+  if (!history[dateKey]) {
+    history[dateKey] = { users: {}, total: 0, day: dayName };
+  }
+  // Always update the day property in case of manual edits or timezone changes
+  history[dateKey].day = dayName;
+  if (normalizedUser) {
+    if (!history[dateKey].users) history[dateKey].users = {};
+    history[dateKey].users[normalizedUser] = (history[dateKey].users[normalizedUser] || 0) + 1;
+  }
+  history[dateKey].total = Object.values(history[dateKey].users).reduce((a, b) => (a as number) + (b as number), 0);
+  // Calculate new dailyCount for today
+  let newDailyCount = 0;
+  if (history[dateKey] && history[dateKey].users) {
+    newDailyCount = Object.values(history[dateKey].users).reduce((a, b) => (a as number) + (b as number), 0);
+  }
   const updatedCounter = await updateCounter(id, {
     value: current.value + 1,
-    dailyCount,
-    history
+    users,
+    history,
+    dailyCount: newDailyCount
   });
   if (!updatedCounter) {
     return NextResponse.json(

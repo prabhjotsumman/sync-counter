@@ -15,13 +15,20 @@ export function useCounterLogic({ id, name, value, onUpdate, isOffline }: {
   function getOrAskUsername() {
     if (typeof window === 'undefined') return undefined;
     let user = localStorage.getItem('syncCounterUser');
-    if (!user) {
-      const promptResult = window.prompt('Please enter your username:');
-      user = promptResult ? promptResult.trim() : null;
-      if (user) {
+    while (!user) {
+      const promptResult = window.prompt('Please enter your username (required):');
+      if (promptResult && promptResult.trim()) {
+        user = promptResult.trim();
+        // Normalize user name: first letter capital, rest lowercase
+        user = user.charAt(0).toUpperCase() + user.slice(1).toLowerCase();
         localStorage.setItem('syncCounterUser', user);
+      } else {
+        window.alert('A username is required to use the app.');
       }
     }
+    // Normalize user name if already present
+    user = user.charAt(0).toUpperCase() + user.slice(1).toLowerCase();
+    localStorage.setItem('syncCounterUser', user);
     return user;
   }
 
@@ -39,6 +46,13 @@ export function useCounterLogic({ id, name, value, onUpdate, isOffline }: {
     if (isOffline) {
       const updatedCounter = updateOfflineCounter(id, 1, today);
       if (updatedCounter) {
+        // Update the full counter data in offline storage to match the latest state
+        const offlineCounters = JSON.parse(localStorage.getItem('offline_counters') || '{"counters":[]}');
+        const idx = offlineCounters.counters.findIndex((c: any) => c.id === id);
+        if (idx !== -1) {
+          offlineCounters.counters[idx] = updatedCounter;
+          localStorage.setItem('offline_counters', JSON.stringify(offlineCounters));
+        }
         onUpdate(id, updatedCounter);
       }
       setIsLoading(false);

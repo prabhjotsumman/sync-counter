@@ -25,7 +25,34 @@ export function getOfflineCounters(): Counter[] {
     const data = localStorage.getItem(COUNTERS_STORAGE_KEY);
     if (data) {
       const parsed = JSON.parse(data) as OfflineCounterData;
-      return parsed.counters || [];
+      const counters = parsed.counters || [];
+      // Normalize all user names in 'users' and 'history'
+      for (const counter of counters) {
+        // Normalize users property
+        if (counter.users) {
+          const newUsers: Record<string, number> = {};
+          for (const key of Object.keys(counter.users)) {
+            const norm = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
+            newUsers[norm] = counter.users[key];
+          }
+          counter.users = newUsers;
+        }
+        // Normalize history property
+        if (counter.history) {
+          for (const dateKey of Object.keys(counter.history)) {
+            const hist = counter.history[dateKey] as { users: Record<string, number>; total: number };
+            if (hist.users) {
+              const newHistUsers: Record<string, number> = {};
+              for (const key of Object.keys(hist.users) as string[]) {
+                const norm = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
+                newHistUsers[norm] = hist.users[key];
+              }
+              hist.users = newHistUsers;
+            }
+          }
+        }
+      }
+      return counters;
     }
   } catch (error) {
     console.error('Failed to get offline counters:', error);
@@ -107,15 +134,23 @@ export function updateOfflineCounter(id: string, delta: number, today?: string):
     const previousValue = counter.value;
     const newValue = previousValue + delta;
     counter.value = newValue;
-    // Daily count logic
-    const dateKey = today || new Date().toISOString().slice(0, 10);
+    // Date key in DD-MM-YYYY format
+    const now = new Date();
+    const dateKey = today || now.toLocaleDateString('en-GB').split('/').join('-');
+    // Simulate current user for local (replace with actual user logic as needed)
+  let currentUser = (typeof window !== 'undefined' && localStorage.getItem('syncCounterUser')) || 'Prabhjot';
+  // Normalize user name: first letter capital, rest lowercase
+  currentUser = currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase();
+  // Update users property for today
+  if (!counter.users) counter.users = {};
+  counter.users[currentUser] = (counter.users[currentUser] || 0) + delta;
+    // Update history for today
     if (!counter.history) counter.history = {};
     if (!counter.history[dateKey]) {
-      counter.history[dateKey] = { totalCount: 0, countedToday: 0, previousCount: [] };
+      counter.history[dateKey] = { users: {}, total: 0 };
     }
-    counter.history[dateKey].totalCount += delta;
-    counter.history[dateKey].countedToday += delta;
-    counter.dailyCount = counter.history[dateKey].countedToday;
+  counter.history[dateKey].users[currentUser] = (counter.history[dateKey].users[currentUser] || 0) + delta;
+    counter.history[dateKey].total = Object.values(counter.history[dateKey].users).reduce((a, b) => (a as number) + (b as number), 0);
     saveOfflineCounters(counters);
     // Only add increment changes
     if (delta > 0) {
@@ -332,13 +367,24 @@ export async function syncPendingChangesToServer(): Promise<boolean> {
     for (const change of sortedChanges) {
       try {
         let response;
-        
         switch (change.type) {
-          case 'increment':
+          case 'increment': {
+            // Send user and today for correct attribution
+            let currentUser = (typeof window !== 'undefined' && localStorage.getItem('syncCounterUser')) || 'Prabhjot';
+            currentUser = currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase();
+            // Try to get the date from the change if available, else use today
+            let today = undefined;
+            if (change.timestamp) {
+              const d = new Date(change.timestamp);
+              today = d.toISOString().slice(0, 10);
+            }
             response = await fetch(`/api/counters/${change.id}/increment`, {
               method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ currentUser, today })
             });
             break;
+          }
           case 'create':
             response = await fetch('/api/counters', {
               method: 'POST',
@@ -376,6 +422,19 @@ export async function syncPendingChangesToServer(): Promise<boolean> {
     // Clear pending changes after successful sync
     clearPendingChanges();
     console.log('Successfully synced all pending changes to server');
+    // Fetch latest counters from server and update offline storage
+    try {
+      const response = await fetch('/api/counters');
+      if (response.ok) {
+        const data = await response.json();
+        if (data && Array.isArray(data.counters)) {
+          // Save the latest server counters to offline storage
+          localStorage.setItem('offline_counters', JSON.stringify({ counters: data.counters, lastSync: Date.now(), lastServerSync: Date.now() }));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to update offline counters after sync:', err);
+    }
     return true;
   } catch (error) {
     console.error('Failed to sync pending changes:', error);
