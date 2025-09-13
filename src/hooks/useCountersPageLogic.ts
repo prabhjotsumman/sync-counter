@@ -144,7 +144,7 @@ export function useCountersPageLogic() {const [anyFullscreen, setAnyFullscreen] 
             saveOfflineCounters(counters);
         }
         setWasOnline(isOnline);
-    }, [isOnline]);
+    }, [isOnline, counters, wasOnline]);
 
     useEffect(() => {
         if (isOnline && pendingRequests > 0) {
