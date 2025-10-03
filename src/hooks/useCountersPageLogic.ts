@@ -165,6 +165,7 @@ export function useCountersPageLogic() {const [anyFullscreen, setAnyFullscreen] 
     };
 
     const handleEditCounter = (counter: CounterData) => {
+        console.log("Counter:", counter);
         setEditingCounter(counter);
         setModalMode('edit');
         setModalOpen(true);
