@@ -2,45 +2,30 @@
   {
     "id": "counter-999",
     "name": "Jaap",
-    "value": 10165,
-    "lastUpdated": 1759533034892,
+    "value": 10324,
+    "lastUpdated": 1759535191308,
     "users": {
       "Simran": 12,
-      "Prabhjot": 14,
+      "Prabhjot": 60,
       "Param": 2,
       "Navi": 1,
-      "Prabh": 120
+      "Prabh": 128
     },
-    "dailyCount": 10,
+    "dailyCount": 44,
     "dailyGoal": 150,
     "history": {
-      "04-09-2025": {
+      "03-10-2025": {
         "users": {
-          "Prabhjot": 7,
-          "Simran": 5
+          "Prabhjot": 10280
         },
-        "total": 12
-      },
-      "2025-09-07": {
-        "users": {
-          "Prabhjot": 4,
-          "Param": 2,
-          "Navi": 1
-        },
-        "total": 7
-      },
-      "2025-09-13": {
-        "users": {
-          "Prabh": 120
-        },
-        "total": 120,
-        "day": "Friday"
+        "total": 10280
       },
       "2025-10-03": {
         "users": {
-          "Prabhjot": 10
+          "Prabhjot": 36,
+          "Prabh": 8
         },
-        "total": 10,
+        "total": 44,
         "day": "Thursday"
       }
     }

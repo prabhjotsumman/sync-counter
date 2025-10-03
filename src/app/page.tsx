@@ -4,7 +4,7 @@
 import CounterModal from '@/components/counter/CounterModal';
 import { useState } from 'react';
 import { useCountersPageLogic } from '@/hooks/useCountersPageLogic';
-import { StatusHeader } from '@/components/page/StatusHeader';
+//import { StatusHeader } from '@/components/page/StatusHeader';
 import { CounterGrid } from '@/components/page/CounterGrid';
 import { SyncStatus } from '@/components/page/SyncStatus';
 
@@ -62,7 +62,15 @@ export default function Page() {
         </div>
       )}
       <div className="container mx-auto px-4 py-12">
-        <StatusHeader isOnline={isOnline} isConnected={isConnected} pendingRequests={pendingRequests} />
+        <div className="flex justify-center mb-8">
+          <h1
+            className="text-4xl font-bold spiritual-glow animate-ekOnkar inline-block text-yellow-400"
+          >
+            ੴ
+          </h1>
+        </div>
+
+
         <CounterGrid
           counters={counters}
           anyFullscreen={anyFullscreen}
@@ -90,6 +98,7 @@ export default function Page() {
           onSave={handleSaveCounter}
         />
       </div>
+      {/* <StatusHeader isOnline={isOnline} isConnected={isConnected} pendingRequests={pendingRequests} /> */}
     </div>
   );
 }
