@@ -59,6 +59,10 @@ export function useCountersPageLogic() {
         }
     };
 
+    const handleUpdateUsername = () => {
+        setShowUsernameModal(true);
+    };
+
     // Counter event handlers
     const updateCounters = useCallback((updater: (prev: CounterData[]) => CounterData[]) => {
         setCounters(prev => {
@@ -328,6 +332,7 @@ export function useCountersPageLogic() {
         fetchCounters,
         syncPendingChangesToServer: async () => { await syncPendingChangesToServer(); },
         showUsernameModal,
-        handleUsernameSubmit
+        handleUsernameSubmit,
+        handleUpdateUsername
     };
 }

@@ -23,7 +23,7 @@ export default function Counter({ id }: CounterProps) {
       {/* Progress bar in top-right corner */}
       {typeof counter.dailyGoal === 'number' && counter.dailyGoal > 0 && (
         <div className="absolute top-0 right-0 w-full max-w-full z-10 rounded-tl-md rounded-tr-md overflow-hidden">
-          <ProgressBar counterName={counter.name} value={counter.dailyCount || 0} max={counter.dailyGoal} showProgressText={true} />
+          <ProgressBar counterName={counter.name} value={counter.dailyCount || 0} max={counter.dailyGoal} showProgressText={true} history={counter.history} />
         </div>
       )}
       {/* Header */}

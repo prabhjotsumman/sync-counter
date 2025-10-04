@@ -23,7 +23,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: { id: stri
       {/* Progress bar in top-right corner (absolute) */}
       {typeof counter.dailyGoal === 'number' && counter.dailyGoal > 0 && (
         <div className="absolute top-0 right-0 w-full max-w-full z-10">
-          <ProgressBar counterName={counter.name} value={counter.dailyCount || 0} max={counter.dailyGoal} />
+          <ProgressBar counterName={counter.name} value={counter.dailyCount || 0} max={counter.dailyGoal} history={counter.history} />
         </div>
       )}
       <div className="flex-1 flex flex-col items-center justify-center w-full">

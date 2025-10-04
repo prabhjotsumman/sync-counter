@@ -3,14 +3,17 @@ import AppHeader from './AppHeader';
 import { CounterGrid } from '@/components/page/CounterGrid';
 import { SyncStatus } from '@/components/page/SyncStatus';
 import CounterModal from '@/components/counter/CounterModal';
+import UserDisplay from './UserDisplay';
 
-export default function MainContent({ editingCounter, pendingRequests, isOnline, isOffline, fetchCounters, syncPendingChangesToServer }: {
+export default function MainContent({ editingCounter, pendingRequests, isOnline, isOffline, fetchCounters, syncPendingChangesToServer, currentUser, onUpdateUsername }: {
   editingCounter: any;
   pendingRequests: number;
   isOnline: boolean;
   isOffline: boolean;
   fetchCounters: () => Promise<void>;
   syncPendingChangesToServer: () => Promise<void>;
+  currentUser: string | null;
+  onUpdateUsername: () => void;
 }) {
   return (
     <div className="container mx-auto px-4 py-12">
@@ -23,6 +26,7 @@ export default function MainContent({ editingCounter, pendingRequests, isOnline,
         syncPendingChangesToServer={syncPendingChangesToServer}
         fetchCounters={fetchCounters}
       />
+      <UserDisplay currentUser={currentUser} onUpdateUsername={onUpdateUsername} />
       <CounterModal id={editingCounter?.id ?? ''} />
     </div>
   );
