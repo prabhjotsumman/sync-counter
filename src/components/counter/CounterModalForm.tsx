@@ -49,12 +49,42 @@ export function CounterModalForm({ id }: CounterModalFormProps) {
     try {
       const safeDailyGoal = typeof dailyGoal === 'number' && !isNaN(dailyGoal) ? dailyGoal : 0;
       if (modalMode === 'edit' && editingCounter) {
-        await handleSaveCounter({
+        // Calculate delta and update dailyCount
+        const oldValue = editingCounter.value;
+        const delta = value - oldValue;
+        const prevDailyCount = typeof editingCounter.dailyCount === 'number' ? editingCounter.dailyCount : 0;
+        const newDailyCount = Math.max(0, prevDailyCount + delta);
+        // Update history for today
+        const today = new Date().toISOString().slice(0, 10);
+        const currentUser = (typeof window !== 'undefined' && localStorage.getItem('syncCounterUser')) || 'Prabhjot';
+        let history = editingCounter.history ? { ...editingCounter.history } : {};
+        if (!history[today]) {
+          history[today] = { users: {}, total: 0, day: today };
+        }
+        // Update per-user count
+        // Prevent per-user count from going negative
+        const newUserCount = Math.max(0, (history[today].users[currentUser] || 0) + delta);
+        history[today].users[currentUser] = newUserCount;
+        // Update total
+        history[today].total = Object.values(history[today].users).reduce((a, b) => (a as number) + (b as number), 0);
+        const updatedCounter = {
           id: editingCounter.id,
           name: name.trim(),
           value,
           dailyGoal: safeDailyGoal,
-        });
+          dailyCount: newDailyCount,
+          history,
+        };
+        await handleSaveCounter(updatedCounter);
+        // Update offline storage to sync with latest state
+        if (typeof window !== 'undefined') {
+          try {
+            const { updateOfflineCounterData } = await import('@/lib/offlineCounterOps');
+            updateOfflineCounterData(editingCounter.id, updatedCounter);
+          } catch (err) {
+            console.error('Failed to update offline storage after edit:', err);
+          }
+        }
       } else {
         await handleSaveCounter({
           name: name.trim(),

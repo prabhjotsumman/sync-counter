@@ -12,6 +12,7 @@ export async function POST(
   // Normalize user name: first letter capital, rest lowercase
   const normalizedUser = currentUser ? currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase() : undefined;
   const current = await (await import('@/lib/counters')).getCounter(id);
+  console.log("currentCounter", current);
   if (!current) {
     return NextResponse.json({ error: 'Counter not found' }, { status: 404 });
   }
