@@ -1,48 +1,17 @@
-import type { Counter as CounterType } from "../../lib/counters";
+
 import React from 'react';
 import Counter from '@/components/Counter';
-import type { CounterData } from '@/hooks/useCountersPageLogic';
+import { useCounterContext } from '@/context/CounterContext';
 
-interface CounterGridProps {
-    counters: CounterData[];
-    anyFullscreen: boolean;
-    setAnyFullscreen: (open: boolean) => void;
-    isOffline: boolean;
-    handleCounterUpdate: (id: string, updatedCounter: CounterType) => void;
-    handleEditCounter: (counter: CounterData) => void;
-    handleDeleteCounter: (id: string) => void;
-    handleAddCounter: () => void;
-}
-
-export function CounterGrid({
-    counters,
-    anyFullscreen,
-    setAnyFullscreen,
-    isOffline,
-    handleCounterUpdate,
-    handleEditCounter,
-    handleDeleteCounter,
-    handleAddCounter,
-}: CounterGridProps) {
+export function CounterGrid() {
+    const { counters, handleAddCounter, modalOpen } = useCounterContext();
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {counters.map((counter) => (
-                <Counter
-                    key={counter.id}
-                    id={counter.id}
-                    name={counter.name}
-                    value={counter.value}
-                    dailyGoal={counter.dailyGoal}
-                    dailyCount={counter.dailyCount}
-                    onUpdate={handleCounterUpdate}
-                    isOffline={isOffline}
-                    onEdit={handleEditCounter}
-                    onDelete={handleDeleteCounter}
-                    setFullscreenOpen={setAnyFullscreen}
-                />
+                <Counter key={counter.id} id={counter.id} />
             ))}
             {/* Add Counter Button below the last counter, centered */}
-            {!anyFullscreen && (
+            {!modalOpen && (
                 <div className="w-full flex justify-center mt-8">
                     <button
                         onClick={handleAddCounter}

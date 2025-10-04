@@ -27,7 +27,7 @@ function normalizeUserName(name: string): string {
 }
 
 export function useCountersPageLogic() {
-    const [anyFullscreen, setAnyFullscreen] = useState(false);
+    const [anyFullscreen, setAnyFullscreen] = useState<string | false>(false);
     const [counters, setCounters] = useState<CounterData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
