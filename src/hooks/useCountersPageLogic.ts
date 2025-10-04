@@ -14,6 +14,7 @@ import {
     clearPendingChanges,
     normalizeUserName
 } from '@/lib/offlineStorage';
+import { syncPendingIncrements, setGlobalCounterUpdateCallback } from '@/lib/offlineUtils';
 
 export interface CounterData {
     id: string;
@@ -49,6 +50,13 @@ export function useCountersPageLogic() {
             setCurrentUser(name);
         }
     }, []);
+
+    // Set up global counter update callback for batch sync
+    useEffect(() => {
+        setGlobalCounterUpdateCallback((counterId, counter) => {
+            setCounters(prev => prev.map(c => c.id === counterId ? counter : c));
+        });
+    }, [setCounters]);
 
     const handleUsernameSubmit = (name: string) => {
         if (name && name.trim()) {
@@ -283,6 +291,12 @@ export function useCountersPageLogic() {
         // Always refresh counters from server when coming back online
         const syncAndRefresh = async () => {
             if (isOnline) {
+                // Sync pending increments first
+                await syncPendingIncrements((counterId, counter) => {
+                    // Update the specific counter with server data
+                    setCounters(prev => prev.map(c => c.id === counterId ? counter : c));
+                });
+                
                 if (pendingRequests > 0) {
                     await syncPendingChangesToServer();
                     // Wait a short delay before fetching from server

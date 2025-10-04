@@ -1,6 +1,6 @@
 import type { Counter } from "../lib/counters";
 import { useState } from 'react';
-import { updateOfflineCounter } from '@/lib/offlineStorage';
+import { addPendingIncrement } from '@/lib/offlineUtils';
 
 export function useCounterLogic({ id, name, value, onUpdate, isOffline, currentCounter }: {
   id: string;
@@ -45,77 +45,59 @@ export function useCounterLogic({ id, name, value, onUpdate, isOffline, currentC
     const today = new Date().toISOString().slice(0, 10);
     
     // Create optimistic update immediately using current counter data
-    const currentUsers = currentCounter?.users || {};
-    const currentHistory = currentCounter?.history || {};
+    if (!currentCounter) {
+      console.error('No current counter data available for optimistic update');
+      setLastAction(null);
+      return;
+    }
+    
+    const currentUsers = currentCounter.users || {};
+    const currentHistory = currentCounter.history || {};
     const todayHistory = currentHistory[today] || { users: {}, total: 0 };
+    
+    // Calculate new dailyCount for today
+    const newTodayHistory = {
+      users: {
+        ...todayHistory.users,
+        [currentUser]: (todayHistory.users[currentUser] || 0) + 1
+      },
+      total: todayHistory.total + 1,
+      day: new Date().toLocaleDateString('en-US', { weekday: 'long' })
+    };
+    
+    const newDailyCount = newTodayHistory.total;
     
     const optimisticCounter: Counter = {
       ...currentCounter,
-      id,
-      name,
-      value: value + 1,
+      value: currentCounter.value + 1,
       lastUpdated: Date.now(),
+      dailyCount: newDailyCount,
       users: {
         ...currentUsers,
         [currentUser]: (currentUsers[currentUser] || 0) + 1
       },
       history: {
         ...currentHistory,
-        [today]: {
-          users: {
-            ...todayHistory.users,
-            [currentUser]: (todayHistory.users[currentUser] || 0) + 1
-          },
-          total: todayHistory.total + 1,
-          day: new Date().toLocaleDateString('en-US', { weekday: 'long' })
-        }
+        [today]: newTodayHistory
       }
     };
     
     // Update UI immediately with optimistic data
+    console.log(`Optimistic update for counter ${id}:`, {
+      oldValue: currentCounter.value,
+      newValue: optimisticCounter.value,
+      oldDailyCount: currentCounter.dailyCount || 0,
+      newDailyCount: optimisticCounter.dailyCount,
+      user: currentUser,
+      today
+    });
+    
     onUpdate(id, optimisticCounter);
     
-    if (isOffline) {
-      // For offline mode, update offline storage
-      const updatedCounter = updateOfflineCounter(id, 1, today);
-      if (updatedCounter) {
-        onUpdate(id, updatedCounter); // Update with actual offline data
-      }
-      setTimeout(() => setLastAction(null), 1000);
-      return;
-    }
-    
-    // For online mode, make network request in background
-    setIsLoading(true);
-    try {
-      const response = await fetch(`/api/counters/${id}/increment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, name, value, currentUser, today })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const serverCounter = data.counter;
-        // Update with server response (which has correct user counts and history)
-        onUpdate(id, serverCounter);
-      } else {
-        // If server request fails, fall back to offline update
-        const updatedCounter = updateOfflineCounter(id, 1, today);
-        if (updatedCounter) {
-          onUpdate(id, updatedCounter);
-        }
-      }
-    } catch (error) {
-      // If network fails, fall back to offline update
-      const updatedCounter = updateOfflineCounter(id, 1, today);
-      if (updatedCounter) {
-        onUpdate(id, updatedCounter);
-      }
-    } finally {
-      setIsLoading(false);
-      setTimeout(() => setLastAction(null), 1000);
-    }
+    // For both online and offline modes, add to batch
+    // The batch sync will handle offline storage when offline
+    addPendingIncrement(id, currentUser, today);
+    setTimeout(() => setLastAction(null), 1000);
   };
 
   return {

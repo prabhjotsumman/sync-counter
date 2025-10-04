@@ -2,17 +2,17 @@
   {
     "id": "counter-999",
     "name": "Jaap",
-    "value": 10842,
-    "lastUpdated": 1759615044154,
+    "value": 10900,
+    "lastUpdated": 1759616726098,
     "users": {
       "Simran": 12,
       "Prabhjot": 881,
       "Param": 2,
       "Navi": 1,
       "Prabh": 128,
-      "Harman": 49
+      "Harman": 107
     },
-    "dailyCount": 834,
+    "dailyCount": 892,
     "dailyGoal": 1000,
     "history": {
       "03-10-2025": {
@@ -32,9 +32,9 @@
       "2025-10-04": {
         "users": {
           "Prabhjot": 785,
-          "Harman": 49
+          "Harman": 107
         },
-        "total": 834,
+        "total": 892,
         "day": "Friday"
       }
     }
@@ -42,51 +42,74 @@
   {
     "id": "counter-1759608022774",
     "name": "New",
-    "value": 319,
-    "lastUpdated": 1759615096058,
+    "value": 402,
+    "lastUpdated": 1759619600167,
     "users": {
       "Prabhjot": 14,
-      "Harman": 43,
+      "Harman": 126,
       "Simran": 40
     },
     "history": {
       "2025-10-04": {
         "users": {
           "Prabhjot": 14,
-          "Harman": 43,
+          "Harman": 126,
           "Simran": 40
         },
-        "total": 97,
+        "total": 180,
         "day": "Friday"
       }
     },
-    "dailyCount": 97,
+    "dailyCount": 180,
     "dailyGoal": 200
   },
   {
     "id": "counter-1759608432219",
     "name": "T1",
-    "value": 100,
-    "lastUpdated": 1759608432219
+    "value": 421,
+    "lastUpdated": 1759619561627,
+    "dailyGoal": 200,
+    "dailyCount": 321,
+    "history": {
+      "2025-10-04": {
+        "users": {
+          "Harman": 217,
+          "Simi": 56,
+          "Prabhjot": 48
+        },
+        "total": 321,
+        "day": "Friday"
+      }
+    },
+    "users": {
+      "Harman": 217,
+      "Simi": 56,
+      "Prabhjot": 48
+    }
   },
   {
     "id": "counter-1759608475364",
     "name": "T3",
-    "value": 31,
-    "lastUpdated": 1759615183279,
+    "value": 541,
+    "lastUpdated": 1759617967181,
     "users": {
-      "Harman": 8
+      "Harman": 293,
+      "Simi": 193,
+      "Prabhjot": 31
     },
     "history": {
       "2025-10-04": {
         "users": {
-          "Harman": 8
+          "Harman": 294,
+          "Simi": 193,
+          "Prabhjot": 31
         },
-        "total": 8,
-        "day": "Friday"
+        "total": 518,
+        "day": "Saturday"
       }
     },
-    "dailyCount": 8
+    "dailyCount": 518,
+    "dailyGoal": 1000
   },
   {
     "id": "counter-1759608576248",
