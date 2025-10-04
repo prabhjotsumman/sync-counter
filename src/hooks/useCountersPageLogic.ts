@@ -164,19 +164,33 @@ export function useCountersPageLogic() {
         setModalOpen(true);
     };
 
+    /**
+     * Handles saving a counter (add or edit) depending on modalMode.
+     * Supports both online and offline modes.
+     * - In offline mode, uses local storage functions.
+     * - In online mode, sends requests to the server.
+     * Falls back to offline logic if network request fails.
+     */
     const handleSaveCounter = async (counterData: Partial<CounterData> & { name: string; value: number }) => {
         try {
+            // Offline mode: add or update counter locally
             if (isOffline) {
                 if (modalMode === 'add') {
+                    // Add new counter offline
                     const newCounter = addOfflineCounter(counterData);
-                    if (newCounter) setCounters(prev => prev.some(c => c.id === newCounter.id) ? prev : [...prev, newCounter]);
+                    if (newCounter)
+                        setCounters(prev => prev.some(c => c.id === newCounter.id) ? prev : [...prev, newCounter]);
                 } else {
+                    // Update existing counter offline
                     const updatedCounter = updateOfflineCounterData(counterData.id!, counterData);
-                    if (updatedCounter) setCounters(prev => prev.map(counter => counter.id === counterData.id ? updatedCounter : counter));
+                    if (updatedCounter)
+                        setCounters(prev => prev.map(counter => counter.id === counterData.id ? updatedCounter : counter));
                 }
                 return;
             }
+            // Online mode: send request to server
             if (modalMode === 'add') {
+                // Add new counter on server
                 const response = await fetch('/api/counters', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -188,6 +202,7 @@ export function useCountersPageLogic() {
                     saveOfflineCounters([...counters, counter]);
                 }
             } else {
+                // Update existing counter on server
                 const response = await fetch(`/api/counters/${counterData.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -200,12 +215,15 @@ export function useCountersPageLogic() {
                 }
             }
         } catch {
+            // Fallback: if request fails, save offline
             if (modalMode === 'add') {
                 const newCounter = addOfflineCounter(counterData);
-                if (newCounter) setCounters(prev => prev.some(c => c.id === newCounter.id) ? prev : [...prev, newCounter]);
+                if (newCounter)
+                    setCounters(prev => prev.some(c => c.id === newCounter.id) ? prev : [...prev, newCounter]);
             } else {
                 const updatedCounter = updateOfflineCounterData(counterData.id!, counterData);
-                if (updatedCounter) setCounters(prev => prev.map(counter => counter.id === counterData.id ? updatedCounter : counter));
+                if (updatedCounter)
+                    setCounters(prev => prev.map(counter => counter.id === counterData.id ? updatedCounter : counter));
             }
         }
     };
