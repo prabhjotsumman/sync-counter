@@ -10,7 +10,8 @@ import {
     syncPendingChangesToServer,
     addOfflineCounter,
     updateOfflineCounterData,
-    deleteOfflineCounter
+    deleteOfflineCounter,
+    getPendingChanges
 } from '@/lib/offlineStorage';
 
 export interface CounterData {
@@ -110,10 +111,21 @@ export function useCountersPageLogic() {
             const response = await fetch('/api/counters');
             if (!response.ok) throw new Error('Failed to fetch counters');
             const { counters: serverCounters, timestamp: serverTimestamp } = await response.json();
-            const mergedCounters = mergeServerData(serverCounters);
-            setCounters(mergedCounters);
-            saveOfflineCounters(mergedCounters, serverTimestamp);
-            clearPendingChanges();
+            const pendingChanges = getPendingChanges();
+            let finalCounters;
+            if (pendingChanges.length === 0) {
+                // If no pending changes, trust server and clear local
+                setCounters(serverCounters);
+                saveOfflineCounters(serverCounters, serverTimestamp);
+                clearPendingChanges();
+                return;
+            } else {
+                // If there are pending changes, merge
+                finalCounters = mergeServerData(serverCounters);
+                setCounters(finalCounters);
+                saveOfflineCounters(finalCounters, serverTimestamp);
+                clearPendingChanges();
+            }
         } catch {
             const offlineCounters = getOfflineCounters();
             if (offlineCounters.length > 0) {
@@ -135,15 +147,9 @@ export function useCountersPageLogic() {
         setWasOnline(isOnline);
     }, [isOnline, counters, wasOnline]);
 
-    useEffect(() => {
-        if (isOnline && pendingRequests > 0) {
-            syncPendingChangesToServer().then(success => {
-                if (success) fetchCounters();
-            });
-        }
-    }, [isOnline, pendingRequests, fetchCounters]);
 
     // Counter CRUD
+    // Only update state, do not update local storage here (already handled in useCounterLogic)
     const handleCounterUpdate = (id: string, updatedCounter: Counter) => {
         setCounters(prev =>
             prev.map(counter =>
@@ -243,6 +249,17 @@ export function useCountersPageLogic() {
             if (deleteOfflineCounter(id)) setCounters(prev => prev.filter(counter => counter.id !== id));
         }
     };
+
+    useEffect(() => {
+        // Sync pending changes when online, then refresh counters from server to prevent double increment
+        const syncAndRefresh = async () => {
+            if (isOnline && pendingRequests > 0) {
+                await syncPendingChangesToServer();
+                await fetchCounters(); // Always refresh from server after syncing
+            }
+        };
+        syncAndRefresh();
+    }, [isOnline, pendingRequests, fetchCounters]);
 
     return {
         anyFullscreen,

@@ -46,14 +46,7 @@ export function useCounterLogic({ id, name, value, onUpdate, isOffline }: {
     if (isOffline) {
       const updatedCounter = updateOfflineCounter(id, 1, today);
       if (updatedCounter) {
-        // Update the full counter data in offline storage to match the latest state
-        const offlineCounters = JSON.parse(localStorage.getItem('offline_counters') || '{"counters":[]}') as { counters: Counter[] };
-        const idx = offlineCounters.counters.findIndex((c: Counter) => c.id === id);
-        if (idx !== -1) {
-          offlineCounters.counters[idx] = updatedCounter;
-          localStorage.setItem('offline_counters', JSON.stringify(offlineCounters));
-        }
-        onUpdate(id, updatedCounter);
+        onUpdate(id, updatedCounter); // Only update UI, offline storage already updated
       }
       setIsLoading(false);
       setTimeout(() => setLastAction(null), 1000);

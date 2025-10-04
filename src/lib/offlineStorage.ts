@@ -313,36 +313,34 @@ export function mergeServerData(serverCounters: Counter[]): Counter[] {
     }
     
     // Create a map of server counters for easy lookup
-    const serverCounterMap = new Map(serverCounters.map(c => [c.id, c]));
+      const serverCounterMap = new Map(serverCounters.map(c => [c.id, c]));
     
-    // Merge each counter
-    const mergedCounters = localCounters.map(localCounter => {
+    // Merge each counter by comparing lastUpdated timestamps
+    const mergedCounters: Counter[] = [];
+    localCounters.forEach(localCounter => {
       const serverCounter = serverCounterMap.get(localCounter.id);
-      
       if (!serverCounter) {
         // Server doesn't have this counter, keep local
-        return localCounter;
+        mergedCounters.push(localCounter);
+        return;
       }
-      
-      // Find the latest change for this counter
-      const latestChange = pendingChanges
-        .filter(change => change.id === localCounter.id)
-        .sort((a, b) => b.timestamp - a.timestamp)[0];
-      
-      if (!latestChange) {
-        // No local changes, use server value
-        return serverCounter;
+      const localUpdated = localCounter.lastUpdated || 0;
+      const serverUpdated = serverCounter.lastUpdated || 0;
+      if (localUpdated > serverUpdated) {
+        mergedCounters.push(localCounter);
+      } else if (serverUpdated > localUpdated) {
+        mergedCounters.push(serverCounter);
+      } else {
+        // If timestamps are equal, prefer server and avoid duplicate
+        mergedCounters.push(serverCounter);
       }
-      
-      // If our latest change is newer than server sync, use our value
-      if (latestChange.timestamp > lastServerSync) {
-        return localCounter;
-      }
-      
-      // Otherwise, use server value
-      return serverCounter;
     });
-    
+    // Add any counters that exist only on the server
+    serverCounters.forEach(serverCounter => {
+      if (!localCounters.find(localCounter => localCounter.id === serverCounter.id)) {
+        mergedCounters.push(serverCounter);
+      }
+    });
     return mergedCounters;
   } catch (error) {
     console.error('Failed to merge server data:', error);
@@ -352,27 +350,27 @@ export function mergeServerData(serverCounters: Counter[]): Counter[] {
 
 // Sync pending changes to server
 export async function syncPendingChangesToServer(): Promise<boolean> {
+    // Prevent concurrent syncs
+    if ((window as any)._syncInProgress) {
+      console.warn('Sync already in progress, skipping duplicate call.');
+      return false;
+    }
+    (window as any)._syncInProgress = true;
   try {
     const pendingChanges = getPendingChanges();
     if (pendingChanges.length === 0) {
+        (window as any)._syncInProgress = false;
       return true; // No changes to sync
     }
-
-    console.log(`Syncing ${pendingChanges.length} pending changes to server...`);
-
     // Sort all changes by timestamp to apply in chronological order
     const sortedChanges = pendingChanges.sort((a, b) => a.timestamp - b.timestamp);
-    
-    // Apply each change to the server
     for (const change of sortedChanges) {
       try {
         let response;
         switch (change.type) {
           case 'increment': {
-            // Send user and today for correct attribution
             let currentUser = (typeof window !== 'undefined' && localStorage.getItem('syncCounterUser')) || 'Prabhjot';
             currentUser = currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase();
-            // Try to get the date from the change if available, else use today
             let today = undefined;
             if (change.timestamp) {
               const d = new Date(change.timestamp);
@@ -406,38 +404,39 @@ export async function syncPendingChangesToServer(): Promise<boolean> {
             break;
           default:
             console.error(`Unknown change type: ${change.type}`);
+              (window as any)._syncInProgress = false;
             return false;
         }
-
         if (!response.ok) {
           console.error(`Failed to sync change for counter ${change.id}:`, change);
+            (window as any)._syncInProgress = false;
           return false;
         }
       } catch (error) {
         console.error(`Error syncing change for counter ${change.id}:`, error);
+          (window as any)._syncInProgress = false;
         return false;
       }
     }
-
     // Clear pending changes after successful sync
     clearPendingChanges();
-    console.log('Successfully synced all pending changes to server');
     // Fetch latest counters from server and update offline storage
     try {
       const response = await fetch('/api/counters');
       if (response.ok) {
         const data = await response.json();
         if (data && Array.isArray(data.counters)) {
-          // Save the latest server counters to offline storage
           localStorage.setItem('offline_counters', JSON.stringify({ counters: data.counters, lastSync: Date.now(), lastServerSync: Date.now() }));
         }
       }
     } catch (err) {
       console.error('Failed to update offline counters after sync:', err);
     }
+      (window as any)._syncInProgress = false;
     return true;
   } catch (error) {
     console.error('Failed to sync pending changes:', error);
+      (window as any)._syncInProgress = false;
     return false;
   }
 }

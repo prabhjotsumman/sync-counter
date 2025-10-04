@@ -2,17 +2,17 @@
   {
     "id": "counter-999",
     "name": "Jaapi",
-    "value": 10690,
-    "lastUpdated": 1759595289381,
+    "value": 10700,
+    "lastUpdated": 1759600793907,
     "users": {
       "Simran": 12,
-      "Prabhjot": 347,
+      "Prabhjot": 796,
       "Param": 2,
       "Navi": 1,
       "Prabh": 128
     },
-    "dailyCount": 259,
-    "dailyGoal": 300,
+    "dailyCount": 700,
+    "dailyGoal": 1000,
     "history": {
       "03-10-2025": {
         "users": {
@@ -30,9 +30,9 @@
       },
       "2025-10-04": {
         "users": {
-          "Prabhjot": 259
+          "Prabhjot": 700
         },
-        "total": 259,
+        "total": 700,
         "day": "Friday"
       }
     }
