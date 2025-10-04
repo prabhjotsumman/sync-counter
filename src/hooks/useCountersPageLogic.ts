@@ -22,8 +22,12 @@ export interface CounterData {
     history?: Counter['history'];
 }
 
-    
-export function useCountersPageLogic() {const [anyFullscreen, setAnyFullscreen] = useState(false);
+function normalizeUserName(name: string): string {
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+}
+
+export function useCountersPageLogic() {
+    const [anyFullscreen, setAnyFullscreen] = useState(false);
     const [counters, setCounters] = useState<CounterData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
@@ -34,13 +38,13 @@ export function useCountersPageLogic() {const [anyFullscreen, setAnyFullscreen] 
     const { isOnline, isOffline, pendingRequests } = useOffline();
     const [wasOnline, setWasOnline] = useState(true);
 
+    // Username logic
     useEffect(() => {
         let name = localStorage.getItem('syncCounterUser');
         if (!name) {
             setShowUsernameModal(true);
         } else {
-            // Normalize user name: first letter capital, rest lowercase
-            name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+            name = normalizeUserName(name);
             localStorage.setItem('syncCounterUser', name);
             setCurrentUser(name);
         }
@@ -48,43 +52,37 @@ export function useCountersPageLogic() {const [anyFullscreen, setAnyFullscreen] 
 
     const handleUsernameSubmit = (name: string) => {
         if (name && name.trim()) {
-            // Normalize user name: first letter capital, rest lowercase
-            name = name.trim();
-            name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-            localStorage.setItem('syncCounterUser', name);
-            setCurrentUser(name);
+            const normalized = normalizeUserName(name.trim());
+            localStorage.setItem('syncCounterUser', normalized);
+            setCurrentUser(normalized);
             setShowUsernameModal(false);
         }
     };
 
-    const handleCounterCreated = useCallback((counter: CounterData) => {
+    // Counter event handlers
+    const updateCounters = useCallback((updater: (prev: CounterData[]) => CounterData[]) => {
         setCounters(prev => {
-            if (prev.some(c => c.id === counter.id)) {
-                const newCounters = prev.map(c => c.id === counter.id ? { ...counter } : c);
-                saveOfflineCounters(newCounters);
-                return newCounters;
-            }
-            const newCounters = [...prev, { ...counter }];
-            saveOfflineCounters(newCounters);
-            return newCounters;
+            const updated = updater(prev);
+            saveOfflineCounters(updated);
+            return updated;
         });
     }, []);
+
+    const handleCounterCreated = useCallback((counter: CounterData) => {
+        updateCounters(prev =>
+            prev.some(c => c.id === counter.id)
+                ? prev.map(c => c.id === counter.id ? { ...counter } : c)
+                : [...prev, { ...counter }]
+        );
+    }, [updateCounters]);
 
     const handleCounterUpdated = useCallback((counter: CounterData) => {
-        setCounters(prev => {
-            const newCounters = prev.map(c => c.id === counter.id ? { ...counter } : c);
-            saveOfflineCounters(newCounters);
-            return newCounters;
-        });
-    }, []);
+        updateCounters(prev => prev.map(c => c.id === counter.id ? { ...counter } : c));
+    }, [updateCounters]);
 
     const handleCounterDeleted = useCallback((counter: CounterData) => {
-        setCounters(prev => {
-            const newCounters = prev.filter(c => c.id !== counter.id);
-            saveOfflineCounters(newCounters);
-            return newCounters;
-        });
-    }, []);
+        updateCounters(prev => prev.filter(c => c.id !== counter.id));
+    }, [updateCounters]);
 
     const handleInitialData = useCallback((counters: CounterData[]) => {
         setCounters(counters);
@@ -96,6 +94,7 @@ export function useCountersPageLogic() {const [anyFullscreen, setAnyFullscreen] 
         setCounters(prev => prev.map(c => c.id === counter.id ? { ...counter } : c));
     }, []);
 
+    // Realtime sync
     const { isConnected } = useRealtimeSync({
         onCounterCreated: handleCounterCreated,
         onCounterUpdated: handleCounterUpdated,
@@ -105,57 +104,46 @@ export function useCountersPageLogic() {const [anyFullscreen, setAnyFullscreen] 
         isOnline
     });
 
-    const fetchCounters = async () => {
+    // Fetch counters
+    const fetchCounters = useCallback(async () => {
         try {
             const response = await fetch('/api/counters');
-            if (response.ok) {
-                const data = await response.json();
-                const serverCounters = data.counters;
-                const serverTimestamp = data.timestamp;
-                const mergedCounters = mergeServerData(serverCounters);
-                setCounters(mergedCounters);
-                saveOfflineCounters(mergedCounters, serverTimestamp);
-                clearPendingChanges();
-            } else {
-                throw new Error('Failed to fetch counters');
-            }
-    } catch {
+            if (!response.ok) throw new Error('Failed to fetch counters');
+            const { counters: serverCounters, timestamp: serverTimestamp } = await response.json();
+            const mergedCounters = mergeServerData(serverCounters);
+            setCounters(mergedCounters);
+            saveOfflineCounters(mergedCounters, serverTimestamp);
+            clearPendingChanges();
+        } catch {
             const offlineCounters = getOfflineCounters();
             if (offlineCounters.length > 0) {
                 setCounters(offlineCounters);
             } else {
-                    console.error('Failed to fetch counters and no offline data available');
+                console.error('Failed to fetch counters and no offline data available');
             }
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
-        if (!isConnected) {
-            fetchCounters();
-        }
-    }, [isConnected]);
+        if (!isConnected) fetchCounters();
+    }, [isConnected, fetchCounters]);
 
-    // When going from online to offline, update offline storage with latest counters
     useEffect(() => {
-        if (!isOnline && wasOnline) {
-            // Save the latest counters to offline storage
-            saveOfflineCounters(counters);
-        }
+        if (!isOnline && wasOnline) saveOfflineCounters(counters);
         setWasOnline(isOnline);
     }, [isOnline, counters, wasOnline]);
 
     useEffect(() => {
         if (isOnline && pendingRequests > 0) {
-            syncPendingChangesToServer().then((success) => {
-                if (success) {
-                    fetchCounters();
-                }
+            syncPendingChangesToServer().then(success => {
+                if (success) fetchCounters();
             });
         }
-    }, [isOnline, pendingRequests]);
+    }, [isOnline, pendingRequests, fetchCounters]);
 
+    // Counter CRUD
     const handleCounterUpdate = (id: string, updatedCounter: Counter) => {
         setCounters(prev =>
             prev.map(counter =>
@@ -165,7 +153,6 @@ export function useCountersPageLogic() {const [anyFullscreen, setAnyFullscreen] 
     };
 
     const handleEditCounter = (counter: CounterData) => {
-        console.log("Counter:", counter);
         setEditingCounter(counter);
         setModalMode('edit');
         setModalOpen(true);
@@ -177,26 +164,15 @@ export function useCountersPageLogic() {const [anyFullscreen, setAnyFullscreen] 
         setModalOpen(true);
     };
 
-    const handleSaveCounter = async (counterData: { id?: string; name: string; value: number; dailyGoal?: number; dailyCount?: number; history?: Counter['history'] }) => {
+    const handleSaveCounter = async (counterData: Partial<CounterData> & { name: string; value: number }) => {
         try {
             if (isOffline) {
                 if (modalMode === 'add') {
                     const newCounter = addOfflineCounter(counterData);
-                    if (newCounter) {
-                        setCounters(prev => {
-                            if (prev.some(c => c.id === newCounter.id)) return prev;
-                            return [...prev, newCounter];
-                        });
-                    }
+                    if (newCounter) setCounters(prev => prev.some(c => c.id === newCounter.id) ? prev : [...prev, newCounter]);
                 } else {
                     const updatedCounter = updateOfflineCounterData(counterData.id!, counterData);
-                    if (updatedCounter) {
-                        setCounters(prev =>
-                            prev.map(counter =>
-                                counter.id === counterData.id ? updatedCounter : counter
-                            )
-                        );
-                    }
+                    if (updatedCounter) setCounters(prev => prev.map(counter => counter.id === counterData.id ? updatedCounter : counter));
                 }
                 return;
             }
@@ -207,12 +183,9 @@ export function useCountersPageLogic() {const [anyFullscreen, setAnyFullscreen] 
                     body: JSON.stringify({ ...counterData, currentUser })
                 });
                 if (response.ok) {
-                    const data = await response.json();
-                    setCounters(prev => {
-                        if (prev.some(c => c.id === data.counter.id)) return prev;
-                        return [...prev, data.counter];
-                    });
-                    saveOfflineCounters([...counters, data.counter]);
+                    const { counter } = await response.json();
+                    setCounters(prev => prev.some(c => c.id === counter.id) ? prev : [...prev, counter]);
+                    saveOfflineCounters([...counters, counter]);
                 }
             } else {
                 const response = await fetch(`/api/counters/${counterData.id}`, {
@@ -221,35 +194,18 @@ export function useCountersPageLogic() {const [anyFullscreen, setAnyFullscreen] 
                     body: JSON.stringify({ ...counterData, currentUser })
                 });
                 if (response.ok) {
-                    const data = await response.json();
-                    setCounters(prev =>
-                        prev.map(counter =>
-                            counter.id === counterData.id ? data.counter : counter
-                        )
-                    );
-                    saveOfflineCounters(counters.map(counter =>
-                        counter.id === counterData.id ? data.counter : counter
-                    ));
+                    const { counter } = await response.json();
+                    setCounters(prev => prev.map(c => c.id === counterData.id ? counter : c));
+                    saveOfflineCounters(counters.map(c => c.id === counterData.id ? counter : c));
                 }
             }
-    } catch {
+        } catch {
             if (modalMode === 'add') {
                 const newCounter = addOfflineCounter(counterData);
-                if (newCounter) {
-                    setCounters(prev => {
-                        if (prev.some(c => c.id === newCounter.id)) return prev;
-                        return [...prev, newCounter];
-                    });
-                }
+                if (newCounter) setCounters(prev => prev.some(c => c.id === newCounter.id) ? prev : [...prev, newCounter]);
             } else {
                 const updatedCounter = updateOfflineCounterData(counterData.id!, counterData);
-                if (updatedCounter) {
-                    setCounters(prev =>
-                        prev.map(counter =>
-                            counter.id === counterData.id ? updatedCounter : counter
-                        )
-                    );
-                }
+                if (updatedCounter) setCounters(prev => prev.map(counter => counter.id === counterData.id ? updatedCounter : counter));
             }
         }
     };
@@ -257,24 +213,16 @@ export function useCountersPageLogic() {const [anyFullscreen, setAnyFullscreen] 
     const handleDeleteCounter = async (id: string) => {
         try {
             if (isOffline) {
-                const success = deleteOfflineCounter(id);
-                if (success) {
-                    setCounters(prev => prev.filter(counter => counter.id !== id));
-                }
+                if (deleteOfflineCounter(id)) setCounters(prev => prev.filter(counter => counter.id !== id));
                 return;
             }
-            const response = await fetch(`/api/counters/${id}`, {
-                method: 'DELETE'
-            });
+            const response = await fetch(`/api/counters/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 setCounters(prev => prev.filter(counter => counter.id !== id));
                 saveOfflineCounters(counters.filter(counter => counter.id !== id));
             }
-    } catch {
-            const success = deleteOfflineCounter(id);
-            if (success) {
-                setCounters(prev => prev.filter(counter => counter.id !== id));
-            }
+        } catch {
+            if (deleteOfflineCounter(id)) setCounters(prev => prev.filter(counter => counter.id !== id));
         }
     };
 
