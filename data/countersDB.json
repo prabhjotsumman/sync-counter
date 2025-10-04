@@ -62,5 +62,69 @@
     "name": "T1",
     "value": 100,
     "lastUpdated": 1759608432219
+  },
+  {
+    "id": "counter-1759608475364",
+    "name": "T3",
+    "value": 23,
+    "lastUpdated": 1759608475364
+  },
+  {
+    "id": "counter-1759608576248",
+    "name": "t4",
+    "value": 1003,
+    "lastUpdated": 1759608576248
+  },
+  {
+    "id": "counter-1759608639898",
+    "name": "T5",
+    "value": 340,
+    "lastUpdated": 1759608689017,
+    "dailyGoal": 10
+  },
+  {
+    "id": "counter-1759608837875",
+    "name": "T5",
+    "value": 40,
+    "lastUpdated": 1759608837875
+  },
+  {
+    "id": "counter-1759608899805",
+    "name": "T6",
+    "value": 34,
+    "lastUpdated": 1759608899805
+  },
+  {
+    "id": "counter-1759608952061",
+    "name": "T7",
+    "value": 34,
+    "lastUpdated": 1759608952062
+  },
+  {
+    "id": "counter-1759608980663",
+    "name": "T8",
+    "value": 40,
+    "lastUpdated": 1759608980664
+  },
+  {
+    "id": "counter-1759609126558",
+    "name": "T9",
+    "value": 51,
+    "lastUpdated": 1759609145573,
+    "dailyGoal": 40,
+    "currentUser": "Prabhjot",
+    "users": {
+      "Prabhjot": 8
+    },
+    "history": {
+      "2025-10-04": {
+        "users": {
+          "Prabhjot": 8
+        },
+        "total": 8,
+        "day": "Friday"
+      }
+    },
+    "dailyCount": 8
   }
 ]

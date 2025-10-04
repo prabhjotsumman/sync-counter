@@ -177,18 +177,28 @@ export function useCountersPageLogic() {
      */
     const handleSaveCounter = async (counterData: Partial<CounterData> & { name: string; value: number }) => {
         try {
+            // Always ensure dailyGoal is set
+            const safeCounterData = {
+                ...counterData,
+                dailyGoal: typeof counterData.dailyGoal === 'number' ? counterData.dailyGoal : 0
+            };
             // Offline mode: add or update counter locally
             if (isOffline) {
                 if (modalMode === 'add') {
                     // Add new counter offline
-                    const newCounter = addOfflineCounter(counterData);
-                    if (newCounter)
-                        setCounters(prev => prev.some(c => c.id === newCounter.id) ? prev : [...prev, newCounter]);
+                    const newCounter = addOfflineCounter(safeCounterData);
+                    if (newCounter) {
+                        setCounters(prev => {
+                            // Remove any counter with the same id (shouldn't happen, but for safety)
+                            const filtered = prev.filter(c => c.id !== newCounter.id);
+                            return [...filtered, newCounter];
+                        });
+                    }
                 } else {
                     // Update existing counter offline
-                    const updatedCounter = updateOfflineCounterData(counterData.id!, counterData);
+                    const updatedCounter = updateOfflineCounterData(safeCounterData.id!, safeCounterData);
                     if (updatedCounter)
-                        setCounters(prev => prev.map(counter => counter.id === counterData.id ? updatedCounter : counter));
+                        setCounters(prev => prev.map(counter => counter.id === safeCounterData.id ? updatedCounter : counter));
                 }
                 return;
             }
@@ -198,7 +208,7 @@ export function useCountersPageLogic() {
                 const response = await fetch('/api/counters', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...counterData, currentUser })
+                    body: JSON.stringify({ ...safeCounterData, currentUser })
                 });
                 if (response.ok) {
                     const { counter } = await response.json();
@@ -207,25 +217,31 @@ export function useCountersPageLogic() {
                 }
             } else {
                 // Update existing counter on server
-                const response = await fetch(`/api/counters/${counterData.id}`, {
+                const response = await fetch(`/api/counters/${safeCounterData.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...counterData, currentUser })
+                    body: JSON.stringify({ ...safeCounterData, currentUser })
                 });
                 if (response.ok) {
                     const { counter } = await response.json();
-                    setCounters(prev => prev.map(c => c.id === counterData.id ? counter : c));
-                    saveOfflineCounters(counters.map(c => c.id === counterData.id ? counter : c));
+                    setCounters(prev => prev.map(c => c.id === safeCounterData.id ? counter : c));
+                    saveOfflineCounters(counters.map(c => c.id === safeCounterData.id ? counter : c));
                 }
             }
         } catch {
             // Fallback: if request fails, save offline
             if (modalMode === 'add') {
-                const newCounter = addOfflineCounter(counterData);
+                const newCounter = addOfflineCounter({
+                    ...counterData,
+                    dailyGoal: typeof counterData.dailyGoal === 'number' ? counterData.dailyGoal : 0
+                });
                 if (newCounter)
                     setCounters(prev => prev.some(c => c.id === newCounter.id) ? prev : [...prev, newCounter]);
             } else {
-                const updatedCounter = updateOfflineCounterData(counterData.id!, counterData);
+                const updatedCounter = updateOfflineCounterData(counterData.id!, {
+                    ...counterData,
+                    dailyGoal: typeof counterData.dailyGoal === 'number' ? counterData.dailyGoal : 0
+                });
                 if (updatedCounter)
                     setCounters(prev => prev.map(counter => counter.id === counterData.id ? updatedCounter : counter));
             }

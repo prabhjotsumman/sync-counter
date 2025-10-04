@@ -157,10 +157,12 @@ export function updateOfflineCounter(id: string, delta: number, today?: string):
 export function addOfflineCounter(counterData: Omit<Counter, 'id'> & { id?: string }): Counter | null {
     try {
         const counters = getOfflineCounters();
+        const safeDailyGoal = typeof counterData.dailyGoal === 'number' && !isNaN(counterData.dailyGoal) ? counterData.dailyGoal : 0;
         const newCounter: Counter = {
             id: counterData.id || `counter-${Date.now()}`,
             name: counterData.name,
             value: counterData.value,
+            dailyGoal: safeDailyGoal,
             lastUpdated: Date.now()
         };
         counters.push(newCounter);
@@ -170,7 +172,8 @@ export function addOfflineCounter(counterData: Omit<Counter, 'id'> & { id?: stri
             type: 'create',
             counterData: {
                 name: newCounter.name,
-                value: newCounter.value
+                value: newCounter.value,
+                dailyGoal: newCounter.dailyGoal
             }
         });
         return newCounter;

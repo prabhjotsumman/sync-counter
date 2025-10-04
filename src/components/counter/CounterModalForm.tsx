@@ -47,12 +47,21 @@ export function CounterModalForm({ id }: CounterModalFormProps) {
     }
     setIsLoading(true);
     try {
-      await handleSaveCounter({
-        id: editingCounter?.id,
-        name: name.trim(),
-        value,
-        dailyGoal,
-      });
+      const safeDailyGoal = typeof dailyGoal === 'number' && !isNaN(dailyGoal) ? dailyGoal : 0;
+      if (modalMode === 'edit' && editingCounter) {
+        await handleSaveCounter({
+          id: editingCounter.id,
+          name: name.trim(),
+          value,
+          dailyGoal: safeDailyGoal,
+        });
+      } else {
+        await handleSaveCounter({
+          name: name.trim(),
+          value,
+          dailyGoal: safeDailyGoal,
+        });
+      }
       setModalOpen(false);
     } catch (error) {
       console.error('Failed to save counter:', error);

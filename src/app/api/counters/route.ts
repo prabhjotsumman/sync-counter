@@ -22,7 +22,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
   const body = await request.json();
-  const { name, value = 0 } = body;
+  const { name, value = 0, dailyGoal, dailyCount, history, currentUser } = body;
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json(
@@ -35,7 +35,11 @@ export async function POST(request: Request) {
       id: `counter-${Date.now()}`,
       name: name.trim(),
       value: parseInt(value) || 0,
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
+      ...(typeof dailyGoal === 'number' ? { dailyGoal } : {}),
+      ...(typeof dailyCount === 'number' ? { dailyCount } : {}),
+      ...(history ? { history } : {}),
+      ...(currentUser ? { currentUser } : {})
     };
 
   const created = await addCounter(newCounter);
