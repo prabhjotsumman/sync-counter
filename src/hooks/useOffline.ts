@@ -39,8 +39,11 @@ export function useOffline(): UseOfflineReturn {
       // Sync pending changes to server
       const success = await syncPendingChangesToServer();
       if (success) {
-        // Trigger a page refresh to get updated data
-        window.location.reload();
+        // Instead of reload, call fetchCounters to refresh UI
+        if (typeof window !== 'undefined') {
+          // Use a custom event to trigger fetchCounters in useCountersPageLogic
+          window.dispatchEvent(new Event('sync-counter-refresh'));
+        }
       }
     } catch (error) {
       console.error('Failed to sync offline data:', error);

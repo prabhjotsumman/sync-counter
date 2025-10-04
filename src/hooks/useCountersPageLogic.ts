@@ -26,6 +26,7 @@ export interface CounterData {
 
 
 export function useCountersPageLogic() {
+    // ...existing code...
     const [anyFullscreen, setAnyFullscreen] = useState<string | false>(false);
     const [counters, setCounters] = useState<CounterData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -105,6 +106,16 @@ export function useCountersPageLogic() {
 
     // Fetch counters
     const fetchCounters = useCallback(async () => {
+    // Listen for refresh event to fetch latest counters after offline sync
+    useEffect(() => {
+        const refreshHandler = () => {
+            fetchCounters();
+        };
+        window.addEventListener('sync-counter-refresh', refreshHandler);
+        return () => {
+            window.removeEventListener('sync-counter-refresh', refreshHandler);
+        };
+    }, [fetchCounters]);
         try {
             const response = await fetch('/api/counters');
             if (!response.ok) throw new Error('Failed to fetch counters');
@@ -265,11 +276,28 @@ export function useCountersPageLogic() {
     };
 
     useEffect(() => {
-        // Sync pending changes when online, then refresh counters from server to prevent double increment
+        // Always refresh counters from server when coming back online
         const syncAndRefresh = async () => {
-            if (isOnline && pendingRequests > 0) {
-                await syncPendingChangesToServer();
-                await fetchCounters(); // Always refresh from server after syncing
+            if (isOnline) {
+                if (pendingRequests > 0) {
+                    await syncPendingChangesToServer();
+                    // Wait a short delay before fetching from server
+                    await new Promise(res => setTimeout(res, 500));
+                    // Retry fetching counters up to 3 times if value is stale
+                    let attempts = 0;
+                    let latestCounters = [];
+                    while (attempts < 3) {
+                        await fetchCounters();
+                        // Optionally, you can check if the counters in state match offline storage
+                        // If so, break early
+                        // latestCounters = getOfflineCounters();
+                        // if (JSON.stringify(counters) === JSON.stringify(latestCounters)) break;
+                        attempts++;
+                        await new Promise(res => setTimeout(res, 300));
+                    }
+                } else {
+                    await fetchCounters(); // Always refresh from server after just coming online
+                }
             }
         };
         syncAndRefresh();
