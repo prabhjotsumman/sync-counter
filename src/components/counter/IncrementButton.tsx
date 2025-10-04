@@ -1,7 +1,4 @@
 import React from 'react';
-
-
-
 import { useCounterContext } from '@/context/CounterContext';
 import { useCounterLogic } from '@/hooks/useCounterLogic';
 

@@ -1,6 +1,5 @@
 import React from "react";
 
-
 interface ProgressBarProps {
   counterName?: string;
   value: number;

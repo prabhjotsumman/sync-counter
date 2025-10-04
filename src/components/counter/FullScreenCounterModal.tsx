@@ -7,7 +7,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: { id: stri
   const { counters, handleCounterUpdate, isOffline } = useCounterContext();
   const counter = counters.find(c => c.id === id);
   if (!open || !counter) return null;
-  const { isLoading, lastAction, handleIncrement } = useCounterLogic({
+  const { handleIncrement } = useCounterLogic({
     id: counter.id,
     name: counter.name,
     value: counter.value,

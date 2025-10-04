@@ -1,6 +1,4 @@
 import React from 'react';
-
-
 import { useCounterContext } from '@/context/CounterContext';
 
 export default function CounterValue({ id }: { id: string }) {

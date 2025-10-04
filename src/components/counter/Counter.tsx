@@ -1,8 +1,11 @@
 'use client';
-import type { Counter } from "../lib/counters";
+import type { Counter } from '@/lib/counters';
 import { useCounterContext } from '@/context/CounterContext';
-import { CounterActions, CounterValue, IncrementButton, FullScreenCounterModal } from './counter/index';
-import ProgressBar from './counter/ProgressBar';
+import CounterActions from '@/components/counter/CounterActions';
+import CounterValue from '@/components/counter/CounterValue';
+import IncrementButton from '@/components/counter/IncrementButton';
+import FullScreenCounterModal from '@/components/counter/FullScreenCounterModal';
+import ProgressBar from '@/components/counter/ProgressBar';
 
 
 interface CounterProps {

@@ -1,8 +1,6 @@
 import React from 'react';
 import IconButton from '@/components/ui/IconButton';
 import { FullscreenIcon, EditIcon, DeleteIcon } from '@/components/ui/CounterIcons';
-
-
 import { useCounterContext } from '@/context/CounterContext';
 
 export default function CounterActions({ id, setFullscreenOpen }: { id: string, setFullscreenOpen: (id: string | false) => void }) {

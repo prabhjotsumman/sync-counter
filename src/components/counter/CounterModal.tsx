@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Counter } from '@/lib/counters';
 import { useCounterContext } from '@/context/CounterContext';
 
 export default function CounterModal({ id }: { id: string }) {
