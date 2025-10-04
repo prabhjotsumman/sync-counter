@@ -81,8 +81,6 @@ export function useOffline(): UseOfflineReturn {
     setPendingRequests(changes.length);
   }, []);
 
-  // ...existing code...
-
   // Initialize pending requests count and update periodically
   useEffect(() => {
     updatePendingCount();

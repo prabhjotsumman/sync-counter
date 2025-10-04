@@ -3,15 +3,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { useOffline } from '@/hooks/useOffline';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import {
-    getOfflineCounters,
-    saveOfflineCounters,
-    clearPendingChanges,
     mergeServerData,
     syncPendingChangesToServer,
     addOfflineCounter,
     updateOfflineCounterData,
     deleteOfflineCounter,
-    getPendingChanges
+    getPendingChanges,
+    saveOfflineCounters,
+    getOfflineCounters,
+    clearPendingChanges,
+    normalizeUserName
 } from '@/lib/offlineStorage';
 
 export interface CounterData {
@@ -23,9 +24,6 @@ export interface CounterData {
     history?: Counter['history'];
 }
 
-function normalizeUserName(name: string): string {
-    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-}
 
 export function useCountersPageLogic() {
     const [anyFullscreen, setAnyFullscreen] = useState<string | false>(false);
