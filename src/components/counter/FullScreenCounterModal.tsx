@@ -13,6 +13,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: { id: stri
     value: counter.value,
     onUpdate: handleCounterUpdate,
     isOffline,
+    currentCounter: counter,
   });
   return (
     <div

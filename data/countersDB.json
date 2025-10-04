@@ -2,17 +2,17 @@
   {
     "id": "counter-999",
     "name": "Jaap",
-    "value": 10831,
-    "lastUpdated": 1759614699073,
+    "value": 10842,
+    "lastUpdated": 1759615044154,
     "users": {
       "Simran": 12,
       "Prabhjot": 881,
       "Param": 2,
       "Navi": 1,
       "Prabh": 128,
-      "Harman": 38
+      "Harman": 49
     },
-    "dailyCount": 823,
+    "dailyCount": 834,
     "dailyGoal": 1000,
     "history": {
       "03-10-2025": {
@@ -32,9 +32,9 @@
       "2025-10-04": {
         "users": {
           "Prabhjot": 785,
-          "Harman": 38
+          "Harman": 49
         },
-        "total": 823,
+        "total": 834,
         "day": "Friday"
       }
     }
@@ -42,21 +42,25 @@
   {
     "id": "counter-1759608022774",
     "name": "New",
-    "value": 236,
-    "lastUpdated": 1759608261733,
+    "value": 319,
+    "lastUpdated": 1759615096058,
     "users": {
-      "Prabhjot": 14
+      "Prabhjot": 14,
+      "Harman": 43,
+      "Simran": 40
     },
     "history": {
       "2025-10-04": {
         "users": {
-          "Prabhjot": 14
+          "Prabhjot": 14,
+          "Harman": 43,
+          "Simran": 40
         },
-        "total": 14,
+        "total": 97,
         "day": "Friday"
       }
     },
-    "dailyCount": 14,
+    "dailyCount": 97,
     "dailyGoal": 200
   },
   {
@@ -68,8 +72,21 @@
   {
     "id": "counter-1759608475364",
     "name": "T3",
-    "value": 23,
-    "lastUpdated": 1759608475364
+    "value": 31,
+    "lastUpdated": 1759615183279,
+    "users": {
+      "Harman": 8
+    },
+    "history": {
+      "2025-10-04": {
+        "users": {
+          "Harman": 8
+        },
+        "total": 8,
+        "day": "Friday"
+      }
+    },
+    "dailyCount": 8
   },
   {
     "id": "counter-1759608576248",
@@ -99,36 +116,63 @@
   {
     "id": "counter-1759608952061",
     "name": "T7",
-    "value": 34,
-    "lastUpdated": 1759608952062
+    "value": 58,
+    "lastUpdated": 1759615072731,
+    "users": {
+      "Prabhjot": 24
+    },
+    "history": {
+      "2025-10-04": {
+        "users": {
+          "Prabhjot": 24
+        },
+        "total": 24,
+        "day": "Friday"
+      }
+    },
+    "dailyCount": 24,
+    "dailyGoal": 600
   },
   {
     "id": "counter-1759608980663",
     "name": "T8",
-    "value": 40,
-    "lastUpdated": 1759608980664
+    "value": 50,
+    "lastUpdated": 1759615074490,
+    "users": {
+      "Prabhjot": 10
+    },
+    "history": {
+      "2025-10-04": {
+        "users": {
+          "Prabhjot": 10
+        },
+        "total": 10,
+        "day": "Friday"
+      }
+    },
+    "dailyCount": 10
   },
   {
     "id": "counter-1759609970206",
     "name": "T10",
-    "value": 140,
-    "lastUpdated": 1759614793289,
+    "value": 146,
+    "lastUpdated": 1759615058999,
     "dailyGoal": 100,
     "currentUser": "Prabhjot",
-    "dailyCount": 101,
+    "dailyCount": 107,
     "users": {
-      "Prabhjot": 52,
+      "Prabhjot": 58,
       "Harman": 20,
       "Simran": 29
     },
     "history": {
       "2025-10-04": {
         "users": {
-          "Prabhjot": 52,
+          "Prabhjot": 58,
           "Harman": 20,
           "Simran": 29
         },
-        "total": 101,
+        "total": 107,
         "day": "Friday"
       }
     }

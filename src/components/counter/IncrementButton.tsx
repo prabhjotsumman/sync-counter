@@ -13,6 +13,7 @@ export default function IncrementButton({ id }: { id: string }) {
     value: counter.value,
     onUpdate: handleCounterUpdate,
     isOffline,
+    currentCounter: counter,
   });
   
   const [userColor, setUserColor] = useState('#10B981');
