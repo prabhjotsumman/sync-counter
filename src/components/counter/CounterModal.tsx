@@ -1,4 +1,4 @@
-
+'use client';
 import { useCounterContext } from '@/context/CounterContext';
 import { CounterModalForm } from './CounterModalForm';
 

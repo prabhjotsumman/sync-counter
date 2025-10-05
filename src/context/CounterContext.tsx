@@ -2,7 +2,7 @@
 // Context provider for counter state and actions
 
 'use client';
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext } from 'react';
 import { Counter } from '../lib/counters';
 import { useCountersPageLogic } from '@/hooks/useCountersPageLogic';
 

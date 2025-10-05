@@ -24,3 +24,33 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Simple soft glow for spiritual text */
+.spiritual-glow {
+  text-shadow: 0 0 8px rgba(250, 204, 21, 0.5), 0 0 16px rgba(250, 204, 21, 0.35);
+}
+
+/* Gentle breathing animation for header ekonkar */
+@keyframes ekonkar-breathe {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 6px rgba(250,204,21,0.35)); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 10px rgba(250,204,21,0.55)); }
+}
+
+.animate-ekOnkar {
+  animation: ekonkar-breathe 3s ease-in-out infinite;
+}
+
+/* Floating bubble animation for the fullscreen increment effect */
+@keyframes ekonkar-bubble-float {
+  0% { transform: translate(-50%, 0) scale(0.9); opacity: 1; }
+  70% { opacity: 0.8; }
+  100% { transform: translate(-50%, -140px) scale(1.05); opacity: 0; }
+}
+
+.ekonkar-bubble {
+  position: absolute;
+  left: 50%;
+  will-change: transform, opacity;
+  animation: ekonkar-bubble-float 900ms ease-out forwards;
+  pointer-events: none;
+}

@@ -1,4 +1,9 @@
 
+// offlineCounterOps.ts
+// Counter CRUD and sync logic for offline mode
+import { Counter } from './counters';
+import { PendingChange } from './offlineStorage';
+
 // Update a counter locally (for name/value changes)
 export function updateOfflineCounterData(id: string, counterData: Omit<Counter, 'id'>): Counter | null {
     try {
@@ -31,10 +36,7 @@ export function updateOfflineCounterData(id: string, counterData: Omit<Counter, 
         return null;
     }
 }
-// offlineCounterOps.ts
-// Counter CRUD and sync logic for offline mode
-import { Counter } from './counters';
-import { PendingChange } from './offlineStorage';
+
 
 // Exported: get pending changes from local storage
 export function getPendingChanges(): PendingChange[] {
@@ -213,8 +215,6 @@ export function deleteOfflineCounter(id: string): boolean {
 export function mergeServerData(serverCounters: Counter[]): Counter[] {
     try {
         const localCounters = getOfflineCounters();
-        const pendingChanges = getPendingChanges();
-        const lastServerSync = getLastServerSyncTimestamp();
         if (localCounters.length === 0) {
             return serverCounters;
         }
@@ -269,7 +269,7 @@ export async function syncPendingChangesToServer(): Promise<boolean> {
                     case 'increment': {
                         let currentUser = (typeof window !== 'undefined' && localStorage.getItem('syncCounterUser')) || 'Prabhjot';
                         currentUser = currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase();
-                        let today = undefined;
+                        let today;
                         if (change.timestamp) {
                             const d = new Date(change.timestamp);
                             today = d.toISOString().slice(0, 10);

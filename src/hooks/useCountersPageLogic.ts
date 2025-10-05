@@ -1,3 +1,4 @@
+'use client';
 import type { Counter } from "../lib/counters";
 import { useState, useEffect, useCallback } from 'react';
 import { useOffline } from '@/hooks/useOffline';
@@ -118,16 +119,6 @@ export function useCountersPageLogic() {
 
     // Fetch counters
     const fetchCounters = useCallback(async () => {
-    // Listen for refresh event to fetch latest counters after offline sync
-    useEffect(() => {
-        const refreshHandler = () => {
-            fetchCounters();
-        };
-        window.addEventListener('sync-counter-refresh', refreshHandler);
-        return () => {
-            window.removeEventListener('sync-counter-refresh', refreshHandler);
-        };
-    }, [fetchCounters]);
         try {
             const response = await fetch('/api/counters');
             if (!response.ok) throw new Error('Failed to fetch counters');
@@ -162,6 +153,17 @@ export function useCountersPageLogic() {
     useEffect(() => {
         if (!isConnected) fetchCounters();
     }, [isConnected, fetchCounters]);
+
+    // Listen for refresh event to fetch latest counters after offline sync
+    useEffect(() => {
+        const refreshHandler = () => {
+            fetchCounters();
+        };
+        window.addEventListener('sync-counter-refresh', refreshHandler);
+        return () => {
+            window.removeEventListener('sync-counter-refresh', refreshHandler);
+        };
+    }, [fetchCounters]);
 
     useEffect(() => {
         if (!isOnline && wasOnline) saveOfflineCounters(counters);
@@ -303,13 +305,8 @@ export function useCountersPageLogic() {
                     await new Promise(res => setTimeout(res, 500));
                     // Retry fetching counters up to 3 times if value is stale
                     let attempts = 0;
-                    let latestCounters = [];
                     while (attempts < 3) {
                         await fetchCounters();
-                        // Optionally, you can check if the counters in state match offline storage
-                        // If so, break early
-                        // latestCounters = getOfflineCounters();
-                        // if (JSON.stringify(counters) === JSON.stringify(latestCounters)) break;
                         attempts++;
                         await new Promise(res => setTimeout(res, 300));
                     }

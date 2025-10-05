@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import IconButton from '@/components/ui/IconButton';
 import { FullscreenIcon, EditIcon, DeleteIcon } from '@/components/ui/CounterIcons';

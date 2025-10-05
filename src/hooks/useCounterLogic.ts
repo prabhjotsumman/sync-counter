@@ -2,15 +2,11 @@ import type { Counter } from "../lib/counters";
 import { useState } from 'react';
 import { addPendingIncrement } from '@/lib/offlineUtils';
 
-export function useCounterLogic({ id, name, value, onUpdate, isOffline, currentCounter }: {
+export function useCounterLogic({ id, onUpdate, currentCounter }: {
   id: string;
-  name: string;
-  value: number;
   onUpdate: (id: string, updatedCounter: Counter) => void;
-  isOffline?: boolean;
   currentCounter?: Counter;
 }) {
-  const [isLoading, setIsLoading] = useState(false);
   const [lastAction, setLastAction] = useState<'increment' | null>(null);
 
   function getOrAskUsername() {
@@ -101,7 +97,6 @@ export function useCounterLogic({ id, name, value, onUpdate, isOffline, currentC
   };
 
   return {
-    isLoading,
     lastAction,
     handleIncrement,
   };

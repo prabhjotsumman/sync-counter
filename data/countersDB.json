@@ -203,13 +203,14 @@
   {
     "id": "counter-1759610878859",
     "name": "TA",
-    "value": 151,
-    "lastUpdated": 1759614685790,
-    "dailyGoal": 100,
+    "value": 196,
+    "lastUpdated": 1759677357429,
+    "dailyGoal": 600,
     "currentUser": "Prabhjot",
     "users": {
       "Prabhjot": 319,
-      "Harman": 72
+      "Harman": 72,
+      "Param": 45
     },
     "history": {
       "2025-10-04": {
@@ -219,8 +220,16 @@
         },
         "total": 151,
         "day": "Friday"
+      },
+      "2025-10-05": {
+        "users": {
+          "Anmol": 0,
+          "Param": 45
+        },
+        "total": 45,
+        "day": "2025-10-05"
       }
     },
-    "dailyCount": 151
+    "dailyCount": 45
   }
 ]

@@ -1,3 +1,4 @@
+'use client';
 import React, { useState, useEffect } from 'react';
 import { InputField } from './InputField';
 import { useCounterContext } from '@/context/CounterContext';
@@ -57,7 +58,7 @@ export function CounterModalForm({ id }: CounterModalFormProps) {
         // Update history for today
         const today = new Date().toISOString().slice(0, 10);
         const currentUser = (typeof window !== 'undefined' && localStorage.getItem('syncCounterUser')) || 'Prabhjot';
-        let history = editingCounter.history ? { ...editingCounter.history } : {};
+        const history = editingCounter.history ? { ...editingCounter.history } : {};
         if (!history[today]) {
           history[today] = { users: {}, total: 0, day: today };
         }
@@ -68,7 +69,7 @@ export function CounterModalForm({ id }: CounterModalFormProps) {
         // Update total
         history[today].total = Object.values(history[today].users).reduce((a, b) => (a as number) + (b as number), 0);
         const updatedCounter = {
-          id: editingCounter.id,
+          id: editingCounter.id || id,
           name: name.trim(),
           value,
           dailyGoal: safeDailyGoal,
