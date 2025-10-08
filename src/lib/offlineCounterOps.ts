@@ -4,6 +4,10 @@
 import { Counter } from './counters';
 import { PendingChange } from './offlineStorage';
 
+declare global {
+  interface Window { _syncInProgress?: boolean }
+}
+
 // Update a counter locally (for name/value changes)
 export function updateOfflineCounterData(id: string, counterData: Omit<Counter, 'id'>): Counter | null {
     try {
@@ -250,15 +254,15 @@ export function mergeServerData(serverCounters: Counter[]): Counter[] {
 
 // Sync pending changes to server
 export async function syncPendingChangesToServer(): Promise<boolean> {
-    if ((window as any)._syncInProgress) {
+    if (window._syncInProgress) {
         console.warn('Sync already in progress, skipping duplicate call.');
         return false;
     }
-    (window as any)._syncInProgress = true;
+    window._syncInProgress = true;
     try {
         const pendingChanges = getPendingChanges();
         if (pendingChanges.length === 0) {
-            (window as any)._syncInProgress = false;
+            window._syncInProgress = false;
             return true;
         }
         const sortedChanges = pendingChanges.sort((a, b) => a.timestamp - b.timestamp);
@@ -302,17 +306,17 @@ export async function syncPendingChangesToServer(): Promise<boolean> {
                         break;
                     default:
                         console.error(`Unknown change type: ${change.type}`);
-                        (window as any)._syncInProgress = false;
+                        window._syncInProgress = false;
                         return false;
                 }
                 if (!response.ok) {
                     console.error(`Failed to sync change for counter ${change.id}:`, change);
-                    (window as any)._syncInProgress = false;
+                    window._syncInProgress = false;
                     return false;
                 }
             } catch (error) {
                 console.error(`Error syncing change for counter ${change.id}:`, error);
-                (window as any)._syncInProgress = false;
+                window._syncInProgress = false;
                 return false;
             }
         }
@@ -328,11 +332,11 @@ export async function syncPendingChangesToServer(): Promise<boolean> {
         } catch (err) {
             console.error('Failed to update offline counters after sync:', err);
         }
-        (window as any)._syncInProgress = false;
+        window._syncInProgress = false;
         return true;
     } catch (error) {
         console.error('Failed to sync pending changes:', error);
-        (window as any)._syncInProgress = false;
+        window._syncInProgress = false;
         return false;
     }
 }

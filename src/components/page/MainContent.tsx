@@ -5,8 +5,10 @@ import { SyncStatus } from '@/components/page/SyncStatus';
 import CounterModal from '@/components/counter/CounterModal';
 import UserDisplay from './UserDisplay';
 
+import type { Counter } from '@/lib/counters';
+
 export default function MainContent({ editingCounter, pendingRequests, isOnline, isOffline, fetchCounters, syncPendingChangesToServer, currentUser, onUpdateUsername }: {
-  editingCounter: any;
+  editingCounter: Counter | null;
   pendingRequests: number;
   isOnline: boolean;
   isOffline: boolean;

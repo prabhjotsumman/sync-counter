@@ -32,7 +32,8 @@ export async function POST(
     // Group increments by user and date
     const userIncrements: Record<string, Record<string, number>> = {};
     
-    increments.forEach((increment: any) => {
+    type BatchIncrement = { currentUser?: string; today?: string };
+    (increments as BatchIncrement[]).forEach((increment) => {
       const normalizedUser = increment.currentUser ? 
         increment.currentUser.charAt(0).toUpperCase() + increment.currentUser.slice(1).toLowerCase() : 
         undefined;

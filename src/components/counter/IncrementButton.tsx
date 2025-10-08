@@ -7,9 +7,8 @@ import { getUserColor } from '@/lib/offlineUtils';
 export default function IncrementButton({ id }: { id: string }) {
   const { counters, handleCounterUpdate } = useCounterContext();
   const counter = counters.find(c => c.id === id);
-  if (!counter) return null;
   const { lastAction, handleIncrement } = useCounterLogic({
-    id: counter.id,
+    id,
     onUpdate: handleCounterUpdate,
     currentCounter: counter,
   });
@@ -43,6 +42,8 @@ export default function IncrementButton({ id }: { id: string }) {
       window.removeEventListener('user-color-updated', handleUserUpdate);
     };
   }, []);
+
+  if (!counter) return null;
 
   return (
     <div className="flex w-full">

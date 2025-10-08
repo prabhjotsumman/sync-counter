@@ -1,6 +1,6 @@
 'use client';
 import type { Counter } from "../lib/counters";
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useOffline } from '@/hooks/useOffline';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import {
@@ -39,6 +39,11 @@ export function useCountersPageLogic() {
     const [showUsernameModal, setShowUsernameModal] = useState(false);
     const { isOnline, isOffline, pendingRequests } = useOffline();
     const [wasOnline, setWasOnline] = useState(true);
+
+    // Deduplicate fetchCounters calls: coalesce concurrent calls and throttle rapid repeats
+    const fetchInFlight = useRef<Promise<void> | null>(null);
+    const lastFetchAt = useRef<number>(0);
+    const FETCH_COOLDOWN_MS = 800;
 
     // Username logic
     useEffect(() => {
@@ -119,35 +124,49 @@ export function useCountersPageLogic() {
 
     // Fetch counters
     const fetchCounters = useCallback(async () => {
-        try {
-            const response = await fetch('/api/counters');
-            if (!response.ok) throw new Error('Failed to fetch counters');
-            const { counters: serverCounters, timestamp: serverTimestamp } = await response.json();
-            const pendingChanges = getPendingChanges();
-            let finalCounters;
-            if (pendingChanges.length === 0) {
-                // If no pending changes, trust server and clear local
-                setCounters(serverCounters);
-                saveOfflineCounters(serverCounters, serverTimestamp);
-                clearPendingChanges();
-                return;
-            } else {
-                // If there are pending changes, merge
-                finalCounters = mergeServerData(serverCounters);
-                setCounters(finalCounters);
-                saveOfflineCounters(finalCounters, serverTimestamp);
-                clearPendingChanges();
-            }
-        } catch {
-            const offlineCounters = getOfflineCounters();
-            if (offlineCounters.length > 0) {
-                setCounters(offlineCounters);
-            } else {
-                console.error('Failed to fetch counters and no offline data available');
-            }
-        } finally {
-            setIsLoading(false);
+        const now = Date.now();
+        // Coalesce concurrent callers
+        if (fetchInFlight.current) {
+            return fetchInFlight.current;
         }
+        // Throttle rapid repeat calls
+        if (now - lastFetchAt.current < FETCH_COOLDOWN_MS) {
+            return Promise.resolve();
+        }
+        const p = (async () => {
+            try {
+                const response = await fetch('/api/counters');
+                if (!response.ok) throw new Error('Failed to fetch counters');
+                const { counters: serverCounters, timestamp: serverTimestamp } = await response.json();
+                const pendingChanges = getPendingChanges();
+                if (pendingChanges.length === 0) {
+                    // If no pending changes, trust server and clear local
+                    setCounters(serverCounters);
+                    saveOfflineCounters(serverCounters, serverTimestamp);
+                    clearPendingChanges();
+                    return;
+                } else {
+                    // If there are pending changes, merge
+                    const finalCounters = mergeServerData(serverCounters);
+                    setCounters(finalCounters);
+                    saveOfflineCounters(finalCounters, serverTimestamp);
+                    clearPendingChanges();
+                }
+            } catch {
+                const offlineCounters = getOfflineCounters();
+                if (offlineCounters.length > 0) {
+                    setCounters(offlineCounters);
+                } else {
+                    console.error('Failed to fetch counters and no offline data available');
+                }
+            } finally {
+                setIsLoading(false);
+                lastFetchAt.current = Date.now();
+                fetchInFlight.current = null;
+            }
+        })();
+        fetchInFlight.current = p;
+        return p;
     }, []);
 
     useEffect(() => {
@@ -301,18 +320,11 @@ export function useCountersPageLogic() {
                 
                 if (pendingRequests > 0) {
                     await syncPendingChangesToServer();
-                    // Wait a short delay before fetching from server
-                    await new Promise(res => setTimeout(res, 500));
-                    // Retry fetching counters up to 3 times if value is stale
-                    let attempts = 0;
-                    while (attempts < 3) {
-                        await fetchCounters();
-                        attempts++;
-                        await new Promise(res => setTimeout(res, 300));
-                    }
-                } else {
-                    await fetchCounters(); // Always refresh from server after just coming online
+                    // Short delay to let server settle
+                    await new Promise(res => setTimeout(res, 300));
                 }
+                // Single refresh (guarded by deduping logic)
+                await fetchCounters();
             }
         };
         syncAndRefresh();

@@ -6,7 +6,7 @@ interface ProgressBarProps {
   value: number;
   max: number;
   showProgressText?: boolean;
-  history?: Record<string, { users: Record<string, number>; total: number; day: string }>;
+  history?: Record<string, { users: Record<string, number>; total: number; day?: string }>;
 }
 
 export default function ProgressBar({ counterName, value, max, showProgressText = true, history }: ProgressBarProps) {

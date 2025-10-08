@@ -3,16 +3,25 @@
 
 import { updateOfflineCounter } from './offlineStorage';
 
+declare global {
+  interface Window {
+    manualSyncIncrements?: typeof syncPendingIncrements;
+    getPendingIncrements?: typeof getPendingIncrements;
+    clearPendingIncrements?: typeof clearPendingIncrements;
+    addPendingIncrement?: typeof addPendingIncrement;
+  }
+}
+
 export function normalizeUserName(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 }
 
-export function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
+export function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): (...args: Parameters<T>) => void {
   let timer: NodeJS.Timeout | null = null;
-  return ((...args: any[]) => {
+  return (...args: Parameters<T>) => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => fn(...args), delay);
-  }) as T;
+  };
 }
 
 export function isDataStale(lastSync: number, thresholdMs: number = 5 * 60 * 1000): boolean {
@@ -108,7 +117,7 @@ const MAX_BATCH_SIZE = 10; // Maximum increments per batch
 
 let batchTimer: NodeJS.Timeout | null = null;
 let batchSyncInProgress = false;
-let globalCounterUpdateCallback: ((counterId: string, counter: any) => void) | null = null;
+let globalCounterUpdateCallback: ((counterId: string, counter: import('./counters').Counter) => void) | null = null;
 
 export function addPendingIncrement(counterId: string, currentUser: string, today: string): void {
   if (typeof window === 'undefined') return;
@@ -145,7 +154,7 @@ export function clearPendingIncrements(): void {
   setLocalStorageItem('syncCounterPendingIncrements', []);
 }
 
-export function setGlobalCounterUpdateCallback(callback: (counterId: string, counter: any) => void): void {
+export function setGlobalCounterUpdateCallback(callback: (counterId: string, counter: import('./counters').Counter) => void): void {
   globalCounterUpdateCallback = callback;
 }
 
@@ -162,7 +171,7 @@ function scheduleBatchSync(): void {
   }, BATCH_SYNC_DELAY);
 }
 
-export async function syncPendingIncrements(onCounterUpdate?: (counterId: string, counter: any) => void): Promise<boolean> {
+export async function syncPendingIncrements(onCounterUpdate?: (counterId: string, counter: import('./counters').Counter) => void): Promise<boolean> {
   if (batchSyncInProgress) {
     console.log('Batch sync already in progress, skipping...');
     return false;
@@ -286,8 +295,8 @@ if (typeof window !== 'undefined') {
   }, 30000);
   
   // Add manual sync function to window for debugging
-  (window as any).manualSyncIncrements = syncPendingIncrements;
-  (window as any).getPendingIncrements = getPendingIncrements;
-  (window as any).clearPendingIncrements = clearPendingIncrements;
-  (window as any).addPendingIncrement = addPendingIncrement;
+  window.manualSyncIncrements = syncPendingIncrements;
+  window.getPendingIncrements = getPendingIncrements;
+  window.clearPendingIncrements = clearPendingIncrements;
+  window.addPendingIncrement = addPendingIncrement;
 }
