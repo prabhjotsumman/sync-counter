@@ -82,21 +82,21 @@
   {
     "id": "counter-1759957349072",
     "name": "test",
-    "value": 3555,
-    "lastUpdated": 1759957365627,
-    "dailyGoal": 150,
+    "value": 3765,
+    "lastUpdated": 1759966339099,
+    "dailyGoal": 200,
     "users": {
-      "Prabh": 8
+      "Prabh": 73
     },
     "history": {
       "2025-10-08": {
         "users": {
-          "Prabh": 12
+          "Prabh": 222
         },
-        "total": 12,
-        "day": "Tuesday"
+        "total": 222,
+        "day": "Wednesday"
       }
     },
-    "dailyCount": 12
+    "dailyCount": 222
   }
 ]

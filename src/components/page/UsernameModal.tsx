@@ -22,17 +22,22 @@ export default function UsernameModal({ show, value, onChange, onSubmit, current
   currentUser?: string | null;
 }) {
   const [selectedColor, setSelectedColor] = useState('#3B82F6');
-  
+
   useEffect(() => {
-    if (currentUser) {
-      setSelectedColor(getUserColor(currentUser));
+    if (show) {
+      if (currentUser) {
+        setSelectedColor(getUserColor(currentUser));
+      }
+      else {
+        setSelectedColor('#3B82F6'); // default color
+      }
     }
-  }, [currentUser]);
-  
+  }, [show, currentUser]);
+
   if (!show) return null;
-  
+
   const isUpdate = !!currentUser;
-  
+
   const handleSubmit = () => {
     if (value.trim()) {
       setUserColor(value.trim(), selectedColor);
@@ -41,7 +46,7 @@ export default function UsernameModal({ show, value, onChange, onSubmit, current
       onSubmit();
     }
   };
-  
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
       <div className="bg-gray-900 rounded-lg p-8 max-w-md w-full mx-4">
@@ -61,7 +66,7 @@ export default function UsernameModal({ show, value, onChange, onSubmit, current
           placeholder={isUpdate ? "Enter new name" : "Your name (required)"}
           autoFocus
         />
-        
+
         {/* Color picker */}
         <div className="mb-6">
           <label className="block text-gray-300 text-sm font-medium mb-3">
@@ -72,23 +77,22 @@ export default function UsernameModal({ show, value, onChange, onSubmit, current
               <button
                 key={color}
                 onClick={() => setSelectedColor(color)}
-                className={`w-10 h-10 rounded-lg border-2 transition-all duration-200 ${
-                  selectedColor === color 
-                    ? 'border-white scale-110' 
+                className={`w-10 h-10 rounded-lg border-2 transition-all duration-200 ${selectedColor === color
+                    ? 'border-white scale-110'
                     : 'border-gray-600 hover:border-gray-400'
-                }`}
+                  }`}
                 style={{ backgroundColor: color }}
                 title={color}
               />
             ))}
           </div>
         </div>
-        
+
         <div className="flex gap-3">
           <button
             onClick={handleSubmit}
             className="flex-1 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-            style={{ 
+            style={{
               backgroundColor: selectedColor,
               opacity: !value.trim() ? 0.5 : 1
             }}

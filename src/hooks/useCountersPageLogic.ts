@@ -131,7 +131,7 @@ export function useCountersPageLogic() {
         }
         // Throttle rapid repeat calls
         if (now - lastFetchAt.current < FETCH_COOLDOWN_MS) {
-            return Promise.resolve();
+            return fetchInFlight.current || Promise.resolve();
         }
         const p = (async () => {
             try {
@@ -175,8 +175,8 @@ export function useCountersPageLogic() {
 
     // Listen for refresh event to fetch latest counters after offline sync
     useEffect(() => {
-        const refreshHandler = () => {
-            fetchCounters();
+        const refreshHandler = async () => {
+            await fetchCounters();
         };
         window.addEventListener('sync-counter-refresh', refreshHandler);
         return () => {
@@ -272,6 +272,8 @@ export function useCountersPageLogic() {
                     saveOfflineCounters(counters.map(c => c.id === safeCounterData.id ? counter : c));
                 }
             }
+            await syncPendingChangesToServer();
+            await fetchCounters();
         } catch {
             // Fallback: if request fails, save offline
             if (modalMode === 'add') {
@@ -310,6 +312,7 @@ export function useCountersPageLogic() {
 
     useEffect(() => {
         // Always refresh counters from server when coming back online
+        let syncTimeout: NodeJS.Timeout | null = null;
         const syncAndRefresh = async () => {
             if (isOnline) {
                 // Sync pending increments first
@@ -317,17 +320,24 @@ export function useCountersPageLogic() {
                     // Update the specific counter with server data
                     setCounters(prev => prev.map(c => c.id === counterId ? counter : c));
                 });
-                
+
                 if (pendingRequests > 0) {
                     await syncPendingChangesToServer();
                     // Short delay to let server settle
                     await new Promise(res => setTimeout(res, 300));
                 }
                 // Single refresh (guarded by deduping logic)
-                await fetchCounters();
+                if (syncTimeout) clearTimeout(syncTimeout);
+                syncTimeout = setTimeout(() => {
+                    fetchCounters();
+                    syncTimeout = null;
+                }, 500);
             }
         };
         syncAndRefresh();
+        return () => {
+            if (syncTimeout) clearTimeout(syncTimeout);
+        }
     }, [isOnline, pendingRequests, fetchCounters]);
 
     return {

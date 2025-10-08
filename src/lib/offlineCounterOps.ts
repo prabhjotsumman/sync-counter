@@ -5,7 +5,7 @@ import { Counter } from './counters';
 import { PendingChange } from './offlineStorage';
 
 declare global {
-  interface Window { _syncInProgress?: boolean }
+    interface Window { _syncInProgress?: boolean }
 }
 
 // Update a counter locally (for name/value changes)
@@ -61,6 +61,19 @@ export function getOfflineCounters(): Counter[] {
         const data = localStorage.getItem('offline_counters');
         if (data) {
             const parsed = JSON.parse(data);
+            // Daily counter reset logic
+            const today = new Date().toISOString().slice(0, 10);
+            parsed.counters.forEach((counter: Counter) => {
+                if (counter.history) {
+                    if (!counter.history[today]) {
+                        counter.dailyCount = 0;
+                    } else {
+                        counter.dailyCount = counter.history[today].total || 0;
+                    }
+                } else {
+                    counter.dailyCount = 0;
+                }
+            });
             return parsed.counters || [];
         }
     } catch (error) {
@@ -72,7 +85,7 @@ export function getOfflineCounters(): Counter[] {
 export function saveOfflineCounters(counters: Counter[], serverSyncTime?: number): void {
     try {
         const existingData = localStorage.getItem('offline_counters');
-        const data = existingData 
+        const data = existingData
             ? JSON.parse(existingData)
             : { counters: [], lastSync: 0, lastServerSync: 0 };
         data.counters = counters;
