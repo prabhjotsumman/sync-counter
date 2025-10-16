@@ -40,7 +40,7 @@ export async function POST(
       
       if (!normalizedUser) return;
       
-      const dateKey = increment.today || new Date().toISOString().slice(0, 10);
+      const dateKey = increment.today || new Date().toLocaleDateString('en-CA');
       
       if (!userIncrements[normalizedUser]) {
         userIncrements[normalizedUser] = {};
@@ -71,8 +71,8 @@ export async function POST(
       });
     });
     
-    // Calculate new dailyCount for today
-    const today = new Date().toISOString().slice(0, 10);
+    // Calculate new dailyCount for today in local timezone
+    const today = new Date().toLocaleDateString('en-CA');
     let newDailyCount = 0;
     if (history[today] && history[today].users) {
       newDailyCount = Object.values(history[today].users).reduce((a, b) => (a as number) + (b as number), 0);

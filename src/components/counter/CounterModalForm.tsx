@@ -55,8 +55,8 @@ export function CounterModalForm({ id }: CounterModalFormProps) {
         const delta = value - oldValue;
         const prevDailyCount = typeof editingCounter.dailyCount === 'number' ? editingCounter.dailyCount : 0;
         const newDailyCount = Math.max(0, prevDailyCount + delta);
-        // Update history for today
-        const today = new Date().toISOString().slice(0, 10);
+        // Update history for today using local timezone
+        const today = new Date().toLocaleDateString('en-CA');
         const currentUser = (typeof window !== 'undefined' && localStorage.getItem('syncCounterUser')) || 'Prabhjot';
         const history = editingCounter.history ? { ...editingCounter.history } : {};
         if (!history[today]) {

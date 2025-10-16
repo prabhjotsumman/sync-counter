@@ -37,8 +37,8 @@ export function useCounterLogic({ id, onUpdate, currentCounter }: {
       return;
     }
     
-    // Get today's date string
-    const today = new Date().toISOString().slice(0, 10);
+    // Get today's date string in local timezone (YYYY-MM-DD)
+    const today = new Date().toLocaleDateString('en-CA'); // e.g., '2023-10-15' in local time
     
     // Create optimistic update immediately using current counter data
     if (!currentCounter) {

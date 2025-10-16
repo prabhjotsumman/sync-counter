@@ -1,11 +1,26 @@
 
+declare global {
+  interface Window {
+    _syncInProgress?: boolean;
+  }
+}
+
 // offlineCounterOps.ts
 // Counter CRUD and sync logic for offline mode
 import { Counter } from './counters';
 import { PendingChange } from './offlineStorage';
 
-declare global {
-    interface Window { _syncInProgress?: boolean }
+// Utility function to reset dailyCount for counters based on local date
+export function resetDailyCountsForCounters(counters: Counter[]): Counter[] {
+  const today = new Date().toLocaleDateString('en-CA');
+  return counters.map(counter => {
+    if (counter.history && counter.history[today]) {
+      counter.dailyCount = counter.history[today].total || 0;
+    } else {
+      counter.dailyCount = 0;
+    }
+    return counter;
+  });
 }
 
 // Update a counter locally (for name/value changes)
@@ -61,8 +76,8 @@ export function getOfflineCounters(): Counter[] {
         const data = localStorage.getItem('offline_counters');
         if (data) {
             const parsed = JSON.parse(data);
-            // Daily counter reset logic
-            const today = new Date().toISOString().slice(0, 10);
+            // Daily counter reset logic using local timezone
+            const today = new Date().toLocaleDateString('en-CA');
             parsed.counters.forEach((counter: Counter) => {
                 if (counter.history) {
                     if (!counter.history[today]) {
@@ -144,7 +159,7 @@ export function updateOfflineCounter(id: string, delta: number, today?: string):
         const newValue = previousValue + delta;
         counter.value = newValue;
         const now = new Date();
-        const dateKey = today || now.toLocaleDateString('en-GB').split('/').join('-');
+        const dateKey = today || new Date().toLocaleDateString('en-CA');
         let currentUser = (typeof window !== 'undefined' && localStorage.getItem('syncCounterUser')) || 'Prabhjot';
         currentUser = currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase();
         if (!counter.users) counter.users = {};
@@ -289,7 +304,7 @@ export async function syncPendingChangesToServer(): Promise<boolean> {
                         let today;
                         if (change.timestamp) {
                             const d = new Date(change.timestamp);
-                            today = d.toISOString().slice(0, 10);
+                            today = d.toLocaleDateString('en-CA');
                         }
                         response = await fetch(`/api/counters/${change.id}/increment`, {
                             method: 'POST',

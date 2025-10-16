@@ -13,9 +13,9 @@ import {
     saveOfflineCounters,
     getOfflineCounters,
     clearPendingChanges,
-    normalizeUserName
-} from '@/lib/offlineStorage';
-import { syncPendingIncrements, setGlobalCounterUpdateCallback } from '@/lib/offlineUtils';
+    resetDailyCountsForCounters
+} from '@/lib/offlineCounterOps';
+import { syncPendingIncrements, setGlobalCounterUpdateCallback, normalizeUserName } from '@/lib/offlineUtils';
 
 export interface CounterData {
     id: string;
@@ -103,8 +103,9 @@ export function useCountersPageLogic() {
     }, [updateCounters]);
 
     const handleInitialData = useCallback((counters: CounterData[]) => {
-        setCounters(counters);
-        saveOfflineCounters(counters);
+        const resetCounters = resetDailyCountsForCounters(counters);
+        setCounters(resetCounters);
+        saveOfflineCounters(resetCounters);
         setIsLoading(false);
     }, []);
 
@@ -141,13 +142,14 @@ export function useCountersPageLogic() {
                 const pendingChanges = getPendingChanges();
                 if (pendingChanges.length === 0) {
                     // If no pending changes, trust server and clear local
-                    setCounters(serverCounters);
-                    saveOfflineCounters(serverCounters, serverTimestamp);
+                    const resetCounters = resetDailyCountsForCounters(serverCounters);
+                    setCounters(resetCounters);
+                    saveOfflineCounters(resetCounters, serverTimestamp);
                     clearPendingChanges();
                     return;
                 } else {
                     // If there are pending changes, merge
-                    const finalCounters = mergeServerData(serverCounters);
+                    const finalCounters = resetDailyCountsForCounters(mergeServerData(serverCounters));
                     setCounters(finalCounters);
                     saveOfflineCounters(finalCounters, serverTimestamp);
                     clearPendingChanges();
@@ -155,7 +157,8 @@ export function useCountersPageLogic() {
             } catch {
                 const offlineCounters = getOfflineCounters();
                 if (offlineCounters.length > 0) {
-                    setCounters(offlineCounters);
+                    const resetOfflineCounters = resetDailyCountsForCounters(offlineCounters);
+                    setCounters(resetOfflineCounters);
                 } else {
                     console.error('Failed to fetch counters and no offline data available');
                 }
