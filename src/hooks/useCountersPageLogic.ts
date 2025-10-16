@@ -95,7 +95,8 @@ export function useCountersPageLogic() {
     }, [updateCounters]);
 
     const handleCounterUpdated = useCallback((counter: CounterData) => {
-        updateCounters(prev => prev.map(c => c.id === counter.id ? { ...counter } : c));
+        const resetCounter = resetDailyCountsForCounters([counter])[0];
+        updateCounters(prev => prev.map(c => c.id === counter.id ? resetCounter : c));
     }, [updateCounters]);
 
     const handleCounterDeleted = useCallback((counter: CounterData) => {
@@ -110,7 +111,8 @@ export function useCountersPageLogic() {
     }, []);
 
     const handleCounterIncremented = useCallback((counter: CounterData) => {
-        setCounters(prev => prev.map(c => c.id === counter.id ? { ...counter } : c));
+        const resetCounter = resetDailyCountsForCounters([counter])[0];
+        setCounters(prev => prev.map(c => c.id === counter.id ? resetCounter : c));
     }, []);
 
     // Realtime sync
@@ -196,9 +198,10 @@ export function useCountersPageLogic() {
     // Counter CRUD
     // Only update state, do not update local storage here (already handled in useCounterLogic)
     const handleCounterUpdate = (id: string, updatedCounter: Counter) => {
+        const resetCounter = resetDailyCountsForCounters([updatedCounter])[0];
         setCounters(prev =>
             prev.map(counter =>
-                counter.id === id ? { ...counter, ...updatedCounter } : counter
+                counter.id === id ? resetCounter : counter
             )
         );
     };
@@ -320,8 +323,9 @@ export function useCountersPageLogic() {
             if (isOnline) {
                 // Sync pending increments first
                 await syncPendingIncrements((counterId, counter) => {
-                    // Update the specific counter with server data
-                    setCounters(prev => prev.map(c => c.id === counterId ? counter : c));
+                    // Update the specific counter with server data and reset daily count
+                    const resetCounter = resetDailyCountsForCounters([counter])[0];
+                    setCounters(prev => prev.map(c => c.id === counterId ? resetCounter : c));
                 });
 
                 if (pendingRequests > 0) {
