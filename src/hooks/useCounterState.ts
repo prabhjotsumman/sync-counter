@@ -5,6 +5,7 @@
  * including finding counters, handling fullscreen state, and styling.
  */
 
+import type { Counter } from '@/types';
 import { useMemo } from 'react';
 import { useCounterContext } from '@/providers/CounterContext';
 import { getDynamicClasses } from '@/utils/styles';
@@ -22,7 +23,7 @@ interface UseCounterStateProps {
  * Return type for the useCounterState hook
  */
 interface CounterStateReturn {
-  counter: any;
+  counter: Counter | undefined;
   isInFullscreen: boolean;
   dynamicClasses: string;
   STYLES: import('@/utils/styles').CounterStyles;

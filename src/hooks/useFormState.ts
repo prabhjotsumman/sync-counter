@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import type { Counter } from '@/types';
 
 /**
  * Generic form field value type
@@ -72,11 +73,9 @@ interface FormActions<T extends Record<string, FormValue>> {
  */
 interface UseFormStateProps<T extends Record<string, FormValue>> {
   /** Form field configurations */
-  fields: FormField<any>[];
+  fields: FormField<T[keyof T]>[];
   /** Form submission handler */
   onSubmit?: (values: T) => Promise<void> | void;
-  /** Whether to validate on change */
-  validateOnChange?: boolean;
   /** Whether to validate on blur */
   validateOnBlur?: boolean;
 }
@@ -92,7 +91,6 @@ type UseFormStateReturn<T extends Record<string, FormValue>> = FormState<T> & Fo
 export function useFormState<T extends Record<string, FormValue>>({
   fields,
   onSubmit,
-  validateOnChange = false,
   validateOnBlur = true,
 }: UseFormStateProps<T>): UseFormStateReturn<T> {
   // Initialize form state
@@ -215,16 +213,17 @@ export function useFormState<T extends Record<string, FormValue>>({
 /**
  * Hook for managing simple counter form state
  */
-export const useCounterFormState = (initialCounter?: any) => {
+export const useCounterFormState = (initialCounter?: Counter | null) => {
   return useFormState({
     fields: [
       {
         name: 'name',
         initialValue: initialCounter?.name || '',
         required: true,
-        validate: (value: string) => {
-          if (!value.trim()) return { isValid: false, error: 'Name is required' };
-          if (value.length > 50) return { isValid: false, error: 'Name must be 50 characters or less' };
+        validate: (value: FormValue) => {
+          const stringValue = String(value);
+          if (!stringValue.trim()) return { isValid: false, error: 'Name is required' };
+          if (stringValue.length > 50) return { isValid: false, error: 'Name must be 50 characters or less' };
           return { isValid: true };
         },
       },
@@ -232,11 +231,12 @@ export const useCounterFormState = (initialCounter?: any) => {
         name: 'dailyGoal',
         initialValue: initialCounter?.dailyGoal || 0,
         required: false,
-        validate: (value: number) => {
-          if (value !== 0 && (typeof value !== 'number' || isNaN(value))) {
+        validate: (value: FormValue) => {
+          const numberValue = Number(value);
+          if (isNaN(numberValue)) {
             return { isValid: false, error: 'Daily goal must be a valid number' };
           }
-          if (value < 0) return { isValid: false, error: 'Daily goal cannot be negative' };
+          if (numberValue < 0) return { isValid: false, error: 'Daily goal cannot be negative' };
           return { isValid: true };
         },
       },
@@ -244,7 +244,7 @@ export const useCounterFormState = (initialCounter?: any) => {
         name: 'resetDailyCount',
         initialValue: false,
         required: false,
-        validate: (value: boolean) => {
+        validate: (value: FormValue) => {
           return { isValid: true };
         },
       },

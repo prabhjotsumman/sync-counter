@@ -13,7 +13,6 @@ import CounterActions from './CounterActions';
  */
 interface CounterHeaderSectionProps {
   counterId: string;
-  isFullscreen: boolean;
   onToggleFullscreen: (id: string | false) => void;
   className?: string;
 }
@@ -23,7 +22,6 @@ interface CounterHeaderSectionProps {
  */
 const CounterHeaderSection: React.FC<CounterHeaderSectionProps> = memo(({
   counterId,
-  isFullscreen,
   onToggleFullscreen,
   className = ''
 }) => (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getUserColor, setUserColor } from '@/lib/offlineUtils';
 
 const COLOR_OPTIONS = [
@@ -27,18 +27,41 @@ export default function UsernameModal({ show, value, onChange, onSubmit, onCance
   useEffect(() => {
     if (show) {
       if (currentUser) {
-        setSelectedColor(getUserColor(currentUser));
-      }
-      else {
+        getUserColor(currentUser).then((color) => {
+          setSelectedColor(color);
+        });
+      } else {
         setSelectedColor('#3B82F6'); // default color
       }
     }
   }, [show, currentUser]);
 
+  // Handle click outside modal
+  const handleBackdropClick = useCallback((e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && onCancel) {
+      onCancel();
+    }
+  }, [onCancel]);
+
+  const isUpdate = !!currentUser;
+
+  const handleSubmit = useCallback(() => {
+    if (value.trim()) {
+      setUserColor(value.trim(), selectedColor);
+      // Dispatch custom event to notify other components of color change
+      window.dispatchEvent(new CustomEvent('user-color-updated'));
+      onSubmit(value.trim());
+    }
+  }, [value, selectedColor, onSubmit]);
+
+  const handleCancel = useCallback(() => {
+    if (onCancel) {
+      onCancel();
+    }
+  }, [onCancel]);
+
   // Handle keyboard events
   useEffect(() => {
-    if (!show) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && onCancel) {
         onCancel();
@@ -49,33 +72,9 @@ export default function UsernameModal({ show, value, onChange, onSubmit, onCance
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [show, value, onCancel]);
-
-  // Handle click outside modal
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && onCancel) {
-      onCancel();
-    }
-  };
+  }, [onCancel, value, handleSubmit]);
 
   if (!show) return null;
-
-  const isUpdate = !!currentUser;
-
-  const handleSubmit = () => {
-    if (value.trim()) {
-      setUserColor(value.trim(), selectedColor);
-      // Dispatch custom event to notify other components of color change
-      window.dispatchEvent(new CustomEvent('user-color-updated'));
-      onSubmit(value.trim());
-    }
-  };
-
-  const handleCancel = () => {
-    if (onCancel) {
-      onCancel();
-    }
-  };
 
   return (
     <div

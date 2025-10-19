@@ -16,9 +16,9 @@ export default function IncrementButton({ id }: { id: string }) {
   const [userColor, setUserColor] = useState('#10B981');
 
   useEffect(() => {
-    const updateUserColor = () => {
+    const updateUserColor = async () => {
       const currentUser = localStorage.getItem('syncCounterUser');
-      const color = currentUser ? getUserColor(currentUser) : '#10B981';
+      const color = currentUser ? await getUserColor(currentUser) : '#10B981';
       setUserColor(color);
     };
 

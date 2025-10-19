@@ -57,7 +57,6 @@ const CounterContainer: React.FC<CounterContainerProps> = memo(({
       {/* Header Section - Contains action buttons */}
       <CounterHeaderSection
         counterId={id}
-        isFullscreen={isInFullscreen}
         onToggleFullscreen={handleFullscreenToggle}
       />
 

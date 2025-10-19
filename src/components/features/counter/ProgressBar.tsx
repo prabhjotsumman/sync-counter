@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Confetti from 'react-confetti';
-import { getUserColor, getAllUserColors } from "@/lib/offlineUtils";
+import { getUserColor } from '@/lib/offlineUtils';
 import { getTodayString } from "@/utils";
 
 interface ProgressBarProps {
@@ -14,7 +14,6 @@ interface ProgressBarProps {
 export default function ProgressBar({ counterName, value, max, showProgressText = true, history }: ProgressBarProps) {
   // Get today's progress from history (daily count for today) - use UTC-based date
   const today = getTodayString();
-  const todayProgress = history?.[today]?.total || 0;
 
   // For progress bar, prioritize the value prop (dailyCount) over history
   // The dailyCount is the authoritative source of truth for today's progress
@@ -26,6 +25,28 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
   const isGoalMet = left === 0 && progressValue > 0;
   const [showConfetti, setShowConfetti] = useState(false);
   const [goalAchievedToday, setGoalAchievedToday] = useState(false);
+  const [userColors, setUserColors] = useState<Record<string, string>>({});
+
+  // Get user colors when history changes
+  useEffect(() => {
+    const fetchUserColors = async () => {
+      if (history?.[today]?.users) {
+        const colorPromises = Object.keys(history[today].users).map(async (username) => {
+          const color = await getUserColor(username);
+          return { username, color };
+        });
+
+        const colors = await Promise.all(colorPromises);
+        const colorMap: Record<string, string> = {};
+        colors.forEach(({ username, color }) => {
+          colorMap[username] = color;
+        });
+        setUserColors(colorMap);
+      }
+    };
+
+    fetchUserColors();
+  }, [history, today]);
 
   // Force re-render when progress value changes significantly
   const [, forceUpdate] = useState({});
@@ -57,14 +78,13 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
       return <div className="absolute left-0 top-0 h-full" style={{ width: '0%' }} />;
     }
 
-    const userColors = getAllUserColors();
     let currentPosition = 0;
 
     return Object.entries(todayHistory.users).map(([username, userCount]) => {
       const userPercent = (userCount as number / totalUserCount) * percent;
       const leftPosition = currentPosition;
 
-      const userColor = userColors[username] || getUserColor(username);
+      const userColor = userColors[username] || '#10B981'; // Fallback to green if no color found
 
       // For very small segments, ensure minimum visibility but don't create gaps
       if (userPercent < 0.1) {

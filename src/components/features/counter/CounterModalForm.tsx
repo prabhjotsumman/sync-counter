@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { useCounterContext } from '@/providers/CounterContext';
 import { useCounterFormState } from '@/hooks/useFormState';
 import { CounterFormHeader, CounterFormFields, CounterFormActions } from '@/components/forms';
+import type { Counter } from '@/types';
 
 interface CounterModalFormProps {
   id: string;
@@ -18,7 +19,7 @@ export function CounterModalForm({ id }: CounterModalFormProps) {
   } = useCounterContext();
 
   // Use the form state hook for state management
-  const formState = useCounterFormState(editingCounter);
+  const formState = useCounterFormState(modalMode === 'edit' ? editingCounter : null);
 
   // Sync form state with modal state changes
   useEffect(() => {
@@ -39,7 +40,7 @@ export function CounterModalForm({ id }: CounterModalFormProps) {
         resetDailyCount: false,
       });
     }
-  }, [modalOpen, modalMode, editingCounter]); // Removed formState from dependencies
+  }, [modalOpen, modalMode, editingCounter, formState]);
 
   const handleSave = async () => {
     const name = formState.values.name as string;

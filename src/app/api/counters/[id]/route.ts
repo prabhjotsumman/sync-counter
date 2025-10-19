@@ -21,7 +21,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-  const { name, value, dailyGoal, dailyCount, history, currentUser } = body;
+  const { name, value, dailyGoal, dailyCount, currentUser } = body;
 
     console.log('🔧 Server edit request:', {
       id,

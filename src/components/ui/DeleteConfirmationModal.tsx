@@ -31,8 +31,8 @@ export default function DeleteConfirmationModal({
             Delete Counter
           </h3>
 
-          <p className="text-sm text-gray-300 mb-6">
-            Are you sure you want to delete <span className="font-semibold text-white">"{counterName}"</span>?
+          <p className="text-sm text-gray-600">
+            Are you sure you want to delete the counter &quot;{counterName}&quot;?
             <br />
             This action cannot be undone.
           </p>
