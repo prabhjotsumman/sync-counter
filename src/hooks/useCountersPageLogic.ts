@@ -1,5 +1,5 @@
 'use client';
-import type { Counter } from "../lib/counters";
+import type { Counter } from "@/lib/counters";
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useOffline } from '@/hooks/useOffline';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
@@ -372,6 +372,7 @@ export function useCountersPageLogic() {
         fetchCounters,
         syncPendingChangesToServer: async () => { await syncPendingChangesToServer(); },
         showUsernameModal,
+        setShowUsernameModal,
         handleUsernameSubmit,
         handleUpdateUsername
     };

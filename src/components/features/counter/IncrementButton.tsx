@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useCounterContext } from '@/context/CounterContext';
+import { useCounterContext } from '@/providers/CounterContext';
 import { useCounterLogic } from '@/hooks/useCounterLogic';
 import { getUserColor } from '@/lib/offlineUtils';
 

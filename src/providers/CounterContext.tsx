@@ -3,7 +3,7 @@
 
 'use client';
 import React, { createContext, useContext } from 'react';
-import { Counter } from '../lib/counters';
+import { Counter } from '@/lib/counters';
 import { useCountersPageLogic } from '@/hooks/useCountersPageLogic';
 
 interface CounterContextType {

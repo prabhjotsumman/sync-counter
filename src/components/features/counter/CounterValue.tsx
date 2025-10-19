@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { useCounterContext } from '@/context/CounterContext';
+import { useCounterContext } from '@/providers/CounterContext';
 
 export default function CounterValue({ id }: { id: string }) {
   const { counters } = useCounterContext();

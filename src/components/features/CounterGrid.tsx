@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
-import Counter from '@/components/counter/Counter';
-import { useCounterContext } from '@/context/CounterContext';
+import { Counter } from '@/components/features/counter';
+import { useCounterContext } from '@/providers/CounterContext';
 
 export function CounterGrid() {
     const { counters, handleAddCounter, modalOpen } = useCounterContext();

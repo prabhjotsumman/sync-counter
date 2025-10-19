@@ -1,8 +1,8 @@
 import React from 'react';
 import AppHeader from './AppHeader';
-import { CounterGrid } from '@/components/page/CounterGrid';
-import { SyncStatus } from '@/components/page/SyncStatus';
-import CounterModal from '@/components/counter/CounterModal';
+import { CounterGrid } from './CounterGrid';
+import { SyncStatus } from './SyncStatus';
+import CounterModal from './counter/CounterModal';
 import UserDisplay from './UserDisplay';
 
 import type { Counter } from '@/lib/counters';

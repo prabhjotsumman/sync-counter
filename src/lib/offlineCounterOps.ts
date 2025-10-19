@@ -10,17 +10,28 @@ declare global {
 import { Counter } from './counters';
 import { PendingChange } from './offlineStorage';
 
-// Utility function to reset dailyCount for counters based on local date
-export function resetDailyCountsForCounters(counters: Counter[]): Counter[] {
+// Utility function to ensure dailyCount is synchronized with history for all counters
+export function ensureDailyCountsFromHistory(counters: Counter[]): Counter[] {
   const today = new Date().toLocaleDateString('en-CA');
   return counters.map(counter => {
+    // If counter has history for today, ensure dailyCount matches
     if (counter.history && counter.history[today]) {
-      counter.dailyCount = counter.history[today].total || 0;
+      const historyTotal = counter.history[today].total || 0;
+      // If dailyCount doesn't match history, update it
+      if (counter.dailyCount !== historyTotal) {
+        counter.dailyCount = historyTotal;
+      }
     } else {
+      // If no history for today, dailyCount should be 0
       counter.dailyCount = 0;
     }
     return counter;
   });
+}
+
+// Utility function to reset dailyCount for counters based on local date
+export function resetDailyCountsForCounters(counters: Counter[]): Counter[] {
+  return ensureDailyCountsFromHistory(counters);
 }
 
 // Update a counter locally (for name/value changes)

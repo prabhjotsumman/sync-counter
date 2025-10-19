@@ -1,5 +1,5 @@
 'use client';
-import { useCounterContext } from '@/context/CounterContext';
+import { useCounterContext } from '@/providers/CounterContext';
 import { CounterModalForm } from './CounterModalForm';
 
 interface CounterModalProps {
@@ -8,9 +8,12 @@ interface CounterModalProps {
 
 export default function CounterModal({ id }: CounterModalProps) {
   const { modalOpen, modalMode, editingCounter } = useCounterContext();
-  if (!modalOpen || (modalMode === 'edit' && !editingCounter)) return null;
+
+  // Don't show modal if not open
+  if (!modalOpen) return null;
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-in fade-in duration-200">
       <CounterModalForm id={id} />
     </div>
   );

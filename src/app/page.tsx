@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useCountersPageLogic } from '@/hooks/useCountersPageLogic';
-import UsernameModal from '@/components/page/UsernameModal';
-import MainContent from '@/components/page/MainContent';
+import UsernameModal from '@/components/features/UsernameModal';
+import MainContent from '@/components/features/MainContent';
 
 export default function Page() {
   const {
@@ -14,6 +14,7 @@ export default function Page() {
     fetchCounters,
     syncPendingChangesToServer,
     showUsernameModal,
+    setShowUsernameModal,
     handleUsernameSubmit,
     currentUser,
     handleUpdateUsername
@@ -36,7 +37,8 @@ export default function Page() {
         show={showUsernameModal}
         value={usernameInput}
         onChange={setUsernameInput}
-        onSubmit={() => handleUsernameSubmit(usernameInput)}
+        onSubmit={(username) => handleUsernameSubmit(username)}
+        onCancel={() => setShowUsernameModal(false)}
         currentUser={currentUser}
       />
       <MainContent

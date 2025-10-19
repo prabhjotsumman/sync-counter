@@ -14,11 +14,12 @@ const COLOR_OPTIONS = [
   '#6366F1', // indigo-500
 ];
 
-export default function UsernameModal({ show, value, onChange, onSubmit, currentUser }: {
+export default function UsernameModal({ show, value, onChange, onSubmit, onCancel, currentUser }: {
   show: boolean;
   value: string;
   onChange: (val: string) => void;
-  onSubmit: () => void;
+  onSubmit: (username: string) => void;
+  onCancel?: () => void;
   currentUser?: string | null;
 }) {
   const [selectedColor, setSelectedColor] = useState('#3B82F6');
@@ -34,6 +35,29 @@ export default function UsernameModal({ show, value, onChange, onSubmit, current
     }
   }, [show, currentUser]);
 
+  // Handle keyboard events
+  useEffect(() => {
+    if (!show) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && onCancel) {
+        onCancel();
+      } else if (e.key === 'Enter' && value.trim()) {
+        handleSubmit();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [show, value, onCancel]);
+
+  // Handle click outside modal
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && onCancel) {
+      onCancel();
+    }
+  };
+
   if (!show) return null;
 
   const isUpdate = !!currentUser;
@@ -43,12 +67,21 @@ export default function UsernameModal({ show, value, onChange, onSubmit, current
       setUserColor(value.trim(), selectedColor);
       // Dispatch custom event to notify other components of color change
       window.dispatchEvent(new CustomEvent('user-color-updated'));
-      onSubmit();
+      onSubmit(value.trim());
+    }
+  };
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
+      onClick={handleBackdropClick}
+    >
       <div className="bg-gray-900 rounded-lg p-8 max-w-md w-full mx-4">
         <h2 className="text-2xl font-bold text-white mb-6">
           {isUpdate ? 'Update Your Name' : 'Enter Your Name'}
@@ -100,6 +133,14 @@ export default function UsernameModal({ show, value, onChange, onSubmit, current
           >
             {isUpdate ? 'Update' : 'Continue'}
           </button>
+          {onCancel && (
+            <button
+              onClick={handleCancel}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+            >
+              Cancel
+            </button>
+          )}
         </div>
       </div>
     </div>

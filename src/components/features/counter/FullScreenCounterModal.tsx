@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useRef, useState } from 'react';
 import ProgressBar from './ProgressBar';
-import { useCounterContext } from '@/context/CounterContext';
+import { useCounterContext } from '@/providers/CounterContext';
 import { useCounterLogic } from '@/hooks/useCounterLogic';
 
 type Bubble = { id: number; createdAt: number };

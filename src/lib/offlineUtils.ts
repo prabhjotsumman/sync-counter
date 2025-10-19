@@ -29,17 +29,22 @@ export function isDataStale(lastSync: number, thresholdMs: number = 5 * 60 * 100
 }
 
 export function getLocalStorageItem<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
   try {
     const data = localStorage.getItem(key);
-    if (data) return JSON.parse(data) as T;
-  } catch {}
-  return fallback;
+    return data ? JSON.parse(data) : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 export function setLocalStorageItem<T>(key: string, value: T): void {
+  if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
+  } catch {
+    // Silent fail for performance
+  }
 }
 
 // User color management
@@ -58,13 +63,13 @@ const DEFAULT_USER_COLORS = [
 
 export function getUserColor(username: string): string {
   if (typeof window === 'undefined') return DEFAULT_USER_COLORS[0];
-  
+
   try {
     const userColors = JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
     if (userColors[username]) {
       return userColors[username];
     }
-    
+
     // Assign a default color based on username hash
     const hash = username.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
@@ -72,11 +77,11 @@ export function getUserColor(username: string): string {
     }, 0);
     const colorIndex = Math.abs(hash) % DEFAULT_USER_COLORS.length;
     const assignedColor = DEFAULT_USER_COLORS[colorIndex];
-    
+
     // Store the assigned color
     userColors[username] = assignedColor;
     localStorage.setItem('syncCounterUserColors', JSON.stringify(userColors));
-    
+
     return assignedColor;
   } catch {
     return DEFAULT_USER_COLORS[0];
@@ -85,17 +90,19 @@ export function getUserColor(username: string): string {
 
 export function setUserColor(username: string, color: string): void {
   if (typeof window === 'undefined') return;
-  
+
   try {
     const userColors = JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
     userColors[username] = color;
     localStorage.setItem('syncCounterUserColors', JSON.stringify(userColors));
-  } catch {}
+  } catch {
+    // Silent fail for performance
+  }
 }
 
 export function getAllUserColors(): Record<string, string> {
   if (typeof window === 'undefined') return {};
-  
+
   try {
     return JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
   } catch {
@@ -112,8 +119,8 @@ export interface PendingIncrement {
   timestamp: number;
 }
 
-const BATCH_SYNC_DELAY = 2000; // 2 seconds
-const MAX_BATCH_SIZE = 10; // Maximum increments per batch
+// Simple 1-minute batch collection
+const BATCH_SYNC_DELAY = 60000; // 1 minute
 
 let batchTimer: NodeJS.Timeout | null = null;
 let batchSyncInProgress = false;
@@ -121,11 +128,11 @@ let globalCounterUpdateCallback: ((counterId: string, counter: import('./counter
 
 export function addPendingIncrement(counterId: string, currentUser: string, today: string): void {
   if (typeof window === 'undefined') return;
-  
+
   try {
     const pendingIncrements = getLocalStorageItem<PendingIncrement[]>('syncCounterPendingIncrements', []);
-    
-    // Add new increment
+
+    // Add new increment immediately to localStorage
     const newIncrement: PendingIncrement = {
       id: `${counterId}-${Date.now()}-${Math.random()}`,
       counterId,
@@ -133,16 +140,112 @@ export function addPendingIncrement(counterId: string, currentUser: string, toda
       today,
       timestamp: Date.now()
     };
-    
+
     pendingIncrements.push(newIncrement);
     setLocalStorageItem('syncCounterPendingIncrements', pendingIncrements);
-    
-    console.log('Added pending increment:', newIncrement, 'Total pending:', pendingIncrements.length);
-    
-    // Schedule batch sync
+
+    // Schedule batch sync for 1 minute later (or reset timer if already scheduled)
     scheduleBatchSync();
   } catch (error) {
-    console.error('Failed to add pending increment:', error);
+    // Silent fail for performance
+  }
+}
+
+function scheduleBatchSync(): void {
+  if (batchTimer) {
+    clearTimeout(batchTimer);
+  }
+
+  batchTimer = setTimeout(() => {
+    syncPendingIncrements();
+  }, BATCH_SYNC_DELAY);
+}
+
+export async function syncPendingIncrements(onCounterUpdate?: (counterId: string, counter: import('./counters').Counter) => void): Promise<boolean> {
+  if (batchSyncInProgress) return false;
+
+  const pendingIncrements = getPendingIncrements();
+  if (pendingIncrements.length === 0) return true;
+
+  batchSyncInProgress = true;
+
+  const isOffline = !navigator.onLine;
+
+  try {
+    // Group increments by counter using Map for better performance
+    const incrementsByCounter = new Map<string, PendingIncrement[]>();
+    for (const increment of pendingIncrements) {
+      const existing = incrementsByCounter.get(increment.counterId) || [];
+      existing.push(increment);
+      incrementsByCounter.set(increment.counterId, existing);
+    }
+
+    if (isOffline) {
+      // Process all offline increments in parallel
+      const offlinePromises = Array.from(incrementsByCounter.entries()).map(async ([counterId, increments]) => {
+        // Process all increments for this counter in parallel
+        const incrementPromises = increments.map(async (increment) => {
+          try {
+            updateOfflineCounter(increment.counterId, 1, increment.today);
+          } catch (error) {
+            // Silent fail for offline increments
+          }
+        });
+        await Promise.all(incrementPromises);
+      });
+
+      await Promise.all(offlinePromises);
+      clearPendingIncrements();
+      return true;
+    }
+
+    // Online mode: process all increments in one batch per counter
+    const syncPromises = Array.from(incrementsByCounter.entries()).map(async ([counterId, increments]) => {
+      // Send all increments for this counter in one batch
+      const batch = increments;
+
+      try {
+        const response = await fetch(`/api/counters/${counterId}/increment-batch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ increments: batch })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+
+          // Update UI with server data if callback provided
+          const updateCallback = onCounterUpdate || globalCounterUpdateCallback;
+          if (updateCallback && result.counter) {
+            updateCallback(counterId, result.counter);
+          }
+
+          return batch; // Return batch for removal
+        }
+        return [];
+      } catch (error) {
+        return [];
+      }
+    });
+
+    const results = await Promise.all(syncPromises);
+
+    // Remove all successfully synced increments in one operation
+    const syncedIds = new Set<string>();
+    results.forEach(batch => {
+      batch.forEach(increment => syncedIds.add(increment.id));
+    });
+
+    if (syncedIds.size > 0) {
+      const remainingIncrements = pendingIncrements.filter(inc => !syncedIds.has(inc.id));
+      setLocalStorageItem('syncCounterPendingIncrements', remainingIncrements);
+    }
+
+    return true;
+  } catch (error) {
+    return false;
+  } finally {
+    batchSyncInProgress = false;
   }
 }
 
@@ -158,137 +261,7 @@ export function setGlobalCounterUpdateCallback(callback: (counterId: string, cou
   globalCounterUpdateCallback = callback;
 }
 
-function scheduleBatchSync(): void {
-  if (batchTimer) {
-    clearTimeout(batchTimer);
-  }
-  
-  console.log(`Scheduling batch sync in ${BATCH_SYNC_DELAY}ms`);
-  
-  batchTimer = setTimeout(() => {
-    console.log('Batch sync timer triggered');
-    syncPendingIncrements();
-  }, BATCH_SYNC_DELAY);
-}
-
-export async function syncPendingIncrements(onCounterUpdate?: (counterId: string, counter: import('./counters').Counter) => void): Promise<boolean> {
-  if (batchSyncInProgress) {
-    console.log('Batch sync already in progress, skipping...');
-    return false;
-  }
-  
-  const pendingIncrements = getPendingIncrements();
-  console.log('Syncing pending increments:', pendingIncrements.length);
-  
-  if (pendingIncrements.length === 0) return true;
-  
-  batchSyncInProgress = true;
-  
-  // Check if we're offline
-  const isOffline = !navigator.onLine;
-  console.log('Network status:', isOffline ? 'offline' : 'online');
-  
-  try {
-    // Group increments by counter
-    const incrementsByCounter: Record<string, PendingIncrement[]> = {};
-    pendingIncrements.forEach(increment => {
-      if (!incrementsByCounter[increment.counterId]) {
-        incrementsByCounter[increment.counterId] = [];
-      }
-      incrementsByCounter[increment.counterId].push(increment);
-    });
-    
-    if (isOffline) {
-      // Handle offline mode - save to offline storage
-      console.log('Offline mode: saving increments to offline storage');
-      
-      const offlinePromises = Object.entries(incrementsByCounter).map(async ([counterId, increments]) => {
-        console.log(`Processing ${increments.length} offline increments for counter ${counterId}`);
-        
-        // Process each increment for offline storage
-        for (const increment of increments) {
-          try {
-            const updatedCounter = updateOfflineCounter(
-              increment.counterId, 
-              1, 
-              increment.today
-            );
-            if (updatedCounter) {
-              console.log(`Saved offline increment for counter ${counterId}`);
-            }
-          } catch (error) {
-            console.error(`Failed to save offline increment for counter ${counterId}:`, error);
-          }
-        }
-        
-        return true;
-      });
-      
-      await Promise.all(offlinePromises);
-      
-      // Clear all pending increments since they're now saved offline
-      clearPendingIncrements();
-      console.log('Cleared all pending increments after offline save');
-      
-      return true;
-    }
-    
-    // Send batches for each counter (online mode)
-    const syncPromises = Object.entries(incrementsByCounter).map(async ([counterId, increments]) => {
-      const batchSize = Math.min(increments.length, MAX_BATCH_SIZE);
-      const batch = increments.slice(0, batchSize);
-      
-      console.log(`Syncing batch for counter ${counterId}:`, batch.length, 'increments');
-      
-      try {
-        const response = await fetch(`/api/counters/${counterId}/increment-batch`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ increments: batch })
-        });
-        
-        console.log(`Batch sync response for ${counterId}:`, response.status, response.ok);
-        
-        if (response.ok) {
-          const result = await response.json();
-          console.log(`Batch sync result for ${counterId}:`, result);
-          
-          // Update UI with server data if callback provided
-          const updateCallback = onCounterUpdate || globalCounterUpdateCallback;
-          if (updateCallback && result.counter) {
-            console.log(`Updating UI with server data for counter ${counterId}`);
-            updateCallback(counterId, result.counter);
-          }
-          
-          // Remove successfully synced increments
-          const remainingIncrements = pendingIncrements.filter(
-            inc => !batch.some(b => b.id === inc.id)
-          );
-          setLocalStorageItem('syncCounterPendingIncrements', remainingIncrements);
-          console.log(`Removed ${batch.length} synced increments, ${remainingIncrements.length} remaining`);
-          return true;
-        } else {
-          const errorText = await response.text();
-          console.error(`Batch sync failed for ${counterId}:`, response.status, errorText);
-        }
-        return false;
-      } catch (error) {
-        console.error(`Failed to sync batch for counter ${counterId}:`, error);
-        return false;
-      }
-    });
-    
-    await Promise.all(syncPromises);
-    return true;
-  } catch (error) {
-    console.error('Failed to sync pending increments:', error);
-    return false;
-  } finally {
-    batchSyncInProgress = false;
-  }
-}
-
-// Auto-sync every 30 seconds
+// Auto-sync every 30 seconds (more frequent for offline support)
 if (typeof window !== 'undefined') {
   setInterval(() => {
     syncPendingIncrements();
