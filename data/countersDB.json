@@ -1,50 +1,31 @@
 [
   {
     "id": "counter-1760887011250",
-    "name": "Tes2",
-    "value": 690,
-    "lastUpdated": 1760896559831,
-    "dailyGoal": 300,
-    "dailyCount": 90,
+    "name": "Tes4",
+    "value": 95,
+    "lastUpdated": 1760903028434,
+    "dailyGoal": 100,
+    "dailyCount": 0,
     "users": {
-      "Prabhjot": 416,
+      "Prabhjot": 461,
       "Poor": 210
     },
     "history": {
       "2025-10-19": {
         "users": {
           "Prabhjot": 0,
-          "Poor": 90
+          "Poor": 0
         },
-        "total": 90,
+        "total": 0,
         "day": "Saturday"
+      },
+      "2025-10-20": {
+        "users": {
+          "Prabhjot": 45
+        },
+        "total": 45,
+        "day": "Sunday"
       }
     }
-  },
-  {
-    "id": "counter-1760887015012",
-    "name": "Prabh",
-    "value": 701,
-    "lastUpdated": 1760897519345,
-    "dailyGoal": 400,
-    "users": {
-      "Farxi": 40,
-      "Prabhjot": 106,
-      "Yoja": 187,
-      "Poor": 125
-    },
-    "history": {
-      "2025-10-19": {
-        "users": {
-          "Farxi": 0,
-          "Prabhjot": 27,
-          "Yoja": 17,
-          "Poor": 356
-        },
-        "total": 400,
-        "day": "Saturday"
-      }
-    },
-    "dailyCount": 400
   }
 ]

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Confetti from 'react-confetti';
 import { getUserColor, getAllUserColors } from "@/lib/offlineUtils";
+import { getTodayString } from "@/utils";
 
 interface ProgressBarProps {
   counterName?: string;
@@ -11,13 +12,13 @@ interface ProgressBarProps {
 }
 
 export default function ProgressBar({ counterName, value, max, showProgressText = true, history }: ProgressBarProps) {
-  // Get today's progress from history (daily count for today)
-  const today = new Date().toLocaleDateString('en-CA');
+  // Get today's progress from history (daily count for today) - use UTC-based date
+  const today = getTodayString();
   const todayProgress = history?.[today]?.total || 0;
 
-  // For progress bar, we should use the value prop (which represents daily count)
-  // But also ensure consistency with history
-  const progressValue = Math.max(value, todayProgress); // Use the higher of the two for safety
+  // For progress bar, prioritize the value prop (dailyCount) over history
+  // The dailyCount is the authoritative source of truth for today's progress
+  const progressValue = value; // Use dailyCount value directly
 
   // Calculate progress percentage based on daily progress toward daily goal
   const percent = max > 0 ? Math.min(100, Math.round((progressValue / max) * 100)) : 0;

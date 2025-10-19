@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { updateCounter, deleteCounter, getCounter } from '@/lib/counters';
 import { broadcastUpdate } from '../../sync/broadcast';
 
+/**
+ * Gets today's date in UTC using YYYY-MM-DD format
+ * @returns Today's date string in YYYY-MM-DD format (UTC)
+ */
+const getTodayStringUTC = (): string => {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(now.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -10,6 +22,16 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
   const { name, value, dailyGoal, dailyCount, history, currentUser } = body;
+
+    console.log('🔧 Server edit request:', {
+      id,
+      name,
+      value,
+      dailyGoal,
+      dailyCount,
+      currentUser,
+      resetRequested: dailyCount === 0
+    });
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json(
@@ -29,33 +51,43 @@ export async function PUT(
       // If dailyCount is provided, recalculate today's history to match
       const currentCounter = await getCounter(id);
       if (currentCounter?.history) {
-        const today = new Date().toLocaleDateString('en-CA');
+        const today = getTodayStringUTC(); // Use UTC-based date
         const adjustedHistory = { ...currentCounter.history };
 
         if (adjustedHistory[today]) {
-          // Update today's history to match the new dailyCount
-          adjustedHistory[today] = {
-            ...adjustedHistory[today],
-            total: dailyCount,
-            // Keep existing user contributions but ensure total matches dailyCount
-            users: adjustedHistory[today].users || {},
-          };
+          // If this is a reset (dailyCount === 0), clear today's history
+          if (dailyCount === 0) {
+            console.log('🔄 Resetting history for today:', today);
+            adjustedHistory[today] = {
+              users: {},
+              total: 0,
+              day: new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
+            };
+          } else {
+            // Update today's history to match the new dailyCount
+            adjustedHistory[today] = {
+              ...adjustedHistory[today],
+              total: dailyCount,
+              // Keep existing user contributions but ensure total matches dailyCount
+              users: adjustedHistory[today].users || {},
+            };
 
-          // Ensure the total matches the sum of user contributions
-          const userTotal = Object.values(adjustedHistory[today].users).reduce((sum, count) => sum + (count as number), 0);
-          if (userTotal !== dailyCount) {
-            // If user contributions don't match dailyCount, scale them proportionally
-            const userKeys = Object.keys(adjustedHistory[today].users);
-            if (userKeys.length > 0 && userTotal > 0) {
-              const scaleFactor = dailyCount / userTotal;
-              userKeys.forEach(userKey => {
-                adjustedHistory[today].users[userKey] = Math.round((adjustedHistory[today].users[userKey] as number) * scaleFactor);
-              });
-              // Recalculate total after scaling
-              adjustedHistory[today].total = Object.values(adjustedHistory[today].users).reduce((sum, count) => sum + (count as number), 0);
-            } else {
-              // If no user contributions or they're 0, set total to match dailyCount
-              adjustedHistory[today].total = dailyCount;
+            // Ensure the total matches the sum of user contributions
+            const userTotal = Object.values(adjustedHistory[today].users).reduce((sum, count) => sum + (count as number), 0);
+            if (userTotal !== dailyCount) {
+              // If user contributions don't match dailyCount, scale them proportionally
+              const userKeys = Object.keys(adjustedHistory[today].users);
+              if (userKeys.length > 0 && userTotal > 0) {
+                const scaleFactor = dailyCount / userTotal;
+                userKeys.forEach(userKey => {
+                  adjustedHistory[today].users[userKey] = Math.round((adjustedHistory[today].users[userKey] as number) * scaleFactor);
+                });
+                // Recalculate total after scaling
+                adjustedHistory[today].total = Object.values(adjustedHistory[today].users).reduce((sum, count) => sum + (count as number), 0);
+              } else {
+                // If no user contributions or they're 0, set total to match dailyCount
+                adjustedHistory[today].total = dailyCount;
+              }
             }
           }
         } else {
@@ -63,7 +95,7 @@ export async function PUT(
           adjustedHistory[today] = {
             users: {},
             total: dailyCount,
-            day: new Date().toLocaleDateString('en-US', { weekday: 'long' })
+            day: new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
           };
         }
 

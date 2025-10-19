@@ -9,10 +9,12 @@ declare global {
 // Counter CRUD and sync logic for offline mode
 import { Counter } from './counters';
 import { PendingChange } from './offlineStorage';
+import { getTodayString } from '../utils';
 
 // Utility function to ensure dailyCount is synchronized with history for all counters
 export function ensureDailyCountsFromHistory(counters: Counter[]): Counter[] {
-  const today = new Date().toLocaleDateString('en-CA');
+  const today = getTodayString();
+
   return counters.map(counter => {
     // If counter has history for today, ensure dailyCount matches
     if (counter.history && counter.history[today]) {
@@ -87,8 +89,8 @@ export function getOfflineCounters(): Counter[] {
         const data = localStorage.getItem('offline_counters');
         if (data) {
             const parsed = JSON.parse(data);
-            // Daily counter reset logic using local timezone
-            const today = new Date().toLocaleDateString('en-CA');
+            // Daily counter reset logic using UTC time
+            const today = getTodayString();
             parsed.counters.forEach((counter: Counter) => {
                 if (counter.history) {
                     if (!counter.history[today]) {
@@ -170,7 +172,7 @@ export function updateOfflineCounter(id: string, delta: number, today?: string):
         const newValue = previousValue + delta;
         counter.value = newValue;
         const now = new Date();
-        const dateKey = today || new Date().toLocaleDateString('en-CA');
+        const dateKey = today || getTodayString();
         let currentUser = (typeof window !== 'undefined' && localStorage.getItem('syncCounterUser')) || 'Prabhjot';
         currentUser = currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase();
         if (!counter.users) counter.users = {};
@@ -315,7 +317,7 @@ export async function syncPendingChangesToServer(): Promise<boolean> {
                         let today;
                         if (change.timestamp) {
                             const d = new Date(change.timestamp);
-                            today = d.toLocaleDateString('en-CA');
+                            today = getTodayString(); // Use UTC for consistency
                         }
                         response = await fetch(`/api/counters/${change.id}/increment`, {
                             method: 'POST',

@@ -74,11 +74,17 @@ export const getRemainingCount = (counter: Counter): number => {
 // ============================================================================
 
 /**
- * Gets today's date in local timezone using YYYY-MM-DD format
- * @returns Today's date string in YYYY-MM-DD format
+ * Gets today's date in UTC using YYYY-MM-DD format
+ * @returns Today's date string in YYYY-MM-DD format (UTC)
  */
 export const getTodayString = (): string => {
-  return new Date().toLocaleDateString('en-CA');
+  // Use UTC time to avoid timezone issues for global users
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(now.getUTCDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
 };
 
 // ============================================================================
