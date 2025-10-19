@@ -30,6 +30,22 @@ body {
   text-shadow: 0 0 8px rgba(250, 204, 21, 0.5), 0 0 16px rgba(250, 204, 21, 0.35);
 }
 
+/* Golden text color for countdown timer */
+.text-golden {
+  color: #FFD700;
+}
+
+/* Golden background color for quote indicators */
+.bg-golden {
+  background-color: #FFD700;
+}
+
+/* Golden shadow for quote indicators */
+.shadow-golden\/30 {
+  --tw-shadow-color: rgb(255 215 0 / 0.3);
+  --tw-shadow-var: var(--tw-shadow-color);
+}
+
 /* Gentle breathing animation for header ekonkar */
 @keyframes ekonkar-breathe {
   0%, 100% { transform: scale(1); filter: drop-shadow(0 0 6px rgba(250,204,21,0.35)); }

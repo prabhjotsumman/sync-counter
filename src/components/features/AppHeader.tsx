@@ -1,11 +1,17 @@
 import React from 'react';
+import CountdownTimer from './counter/CountdownTimer';
+import GurbaniQuote from './GurbaniQuote';
 
 export default function AppHeader() {
   return (
-    <div className="flex justify-center mb-8">
-      <h1 className="text-4xl font-bold spiritual-glow animate-ekOnkar inline-block text-yellow-400">
-        ੴ
-      </h1>
+    <div className="flex flex-col items-center mb-8 space-y-6">
+      <CountdownTimer size={80} />
+      <GurbaniQuote
+        showTransliteration={false}
+        showMeaning={true}
+        autoRotate={true}
+        rotationInterval={5000}
+      />
     </div>
   );
 }
