@@ -62,7 +62,10 @@ export const CounterFormFields: React.FC<CounterFormFieldsProps> = ({
         label="Initial Value"
         type="number"
         value={value}
-        onChange={(e) => onValueChange(parseInt(e.target.value) || 0)}
+        onChange={(e) => {
+          const numValue = parseInt(e.target.value) || 0;
+          onValueChange(numValue);
+        }}
         placeholder="0"
         disabled={disabled}
       />
@@ -70,7 +73,10 @@ export const CounterFormFields: React.FC<CounterFormFieldsProps> = ({
         label="Daily Goal"
         type="number"
         value={dailyGoal}
-        onChange={(e) => onDailyGoalChange(parseInt(e.target.value) || 0)}
+        onChange={(e) => {
+          const numValue = parseInt(e.target.value) || 0;
+          onDailyGoalChange(numValue);
+        }}
         placeholder="Enter daily goal (optional)"
         disabled={disabled}
       />

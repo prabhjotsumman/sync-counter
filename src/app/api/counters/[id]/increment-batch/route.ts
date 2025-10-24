@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCounter, updateCounter } from '@/lib/counters';
+import type { Counter } from '@/lib/counters';
+import { getCounter, updateCounter, addCounter } from '@/lib/counters';
 import { broadcastUpdate } from '../../../sync/broadcast';
 
 /**
@@ -54,16 +55,40 @@ export async function POST(
     }
 
     const current = await getCounter(id);
+    let counterToUpdate = current;
+
     if (!current) {
-      console.error(`Counter ${id} not found in database`);
-      return NextResponse.json({ error: 'Counter not found' }, { status: 404 });
+      console.log(`Counter ${id} not found, creating new counter`);
+
+      // Extract user information from the first increment to create the counter
+      const firstIncrement = increments[0] as { currentUser?: string };
+      const userName = firstIncrement?.currentUser || 'Unknown';
+
+      // Create a new counter with basic structure
+      const newCounter = await addCounter({
+        id,
+        name: `Counter ${id.slice(-8)}`, // Use last 8 chars of ID as name
+        value: 0,
+        dailyGoal: 0,
+        dailyCount: 0,
+        users: {},
+        history: {},
+        lastUpdated: Date.now()
+      });
+
+      console.log(`Created new counter ${id} with name: ${newCounter.name}`);
+      counterToUpdate = newCounter;
     }
 
-    console.log(`Counter ${id} current value: ${current.value}`);
+    if (!counterToUpdate) {
+      return NextResponse.json({ error: 'Failed to create counter' }, { status: 500 });
+    }
+
+    console.log(`Counter ${id} current value: ${counterToUpdate.value}`);
 
     // Process all increments in the batch
-    const history = current.history || {};
-    const users = { ...(current.users || {}) };
+    const history = counterToUpdate.history || {};
+    const users = { ...(counterToUpdate.users || {}) };
     let totalIncrements = 0;
 
     // Group increments by user and date
@@ -117,8 +142,8 @@ export async function POST(
 
     // Update counter
     const updatedCounter = {
-      ...current,
-      value: current.value + totalIncrements,
+      ...counterToUpdate,
+      value: counterToUpdate.value + totalIncrements,
       users,
       history,
       dailyCount: newDailyCount,
@@ -126,8 +151,8 @@ export async function POST(
     };
 
     console.log(`Updating counter ${id}:`, {
-      value: `${current.value} -> ${updatedCounter.value} (+${totalIncrements})`,
-      dailyCount: `${current.dailyCount || 0} -> ${updatedCounter.dailyCount}`,
+      value: `${counterToUpdate.value} -> ${updatedCounter.value} (+${totalIncrements})`,
+      dailyCount: `${counterToUpdate.dailyCount || 0} -> ${updatedCounter.dailyCount}`,
       totalIncrements
     });
 

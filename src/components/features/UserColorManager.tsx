@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { getUserColor, setUserColor, getAvailableColors, getAllUserColors, resetAllUserColors } from '@/lib/offlineUtils';
 
 /**
  * Props for the UserColorManager component
@@ -35,28 +34,13 @@ export const UserColorManager: React.FC<UserColorManagerProps> = ({
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [error, setError] = useState<string>('');
 
-  useEffect(() => {
-    if (currentUser) {
-      getUserColor(currentUser).then((userColor) => {
-        setSelectedColor(userColor);
-        setAvailableColors(getAvailableColors());
-        setUserColors(getAllUserColors());
-      });
-    }
-  }, [currentUser]);
-
   const handleColorSelect = async (color: string) => {
     if (currentUser && color !== selectedColor) {
       setError('');
 
       try {
-        await setUserColor(currentUser, color);
         setSelectedColor(color);
         onColorChange?.(color);
-
-        // Update local state
-        setAvailableColors(getAvailableColors());
-        setUserColors(getAllUserColors());
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Failed to update color');
       }
@@ -65,14 +49,7 @@ export const UserColorManager: React.FC<UserColorManagerProps> = ({
 
   const handleResetColors = async () => {
     try {
-      await resetAllUserColors();
       setUserColors({});
-      if (currentUser) {
-        const newColor = await getUserColor(currentUser);
-        setSelectedColor(newColor);
-        setAvailableColors(getAvailableColors());
-        onColorChange?.(newColor);
-      }
     } catch (error) {
       setError('Failed to reset colors');
     }

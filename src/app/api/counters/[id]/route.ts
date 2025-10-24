@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateCounter, deleteCounter, getCounter } from '@/lib/counters';
+import { updateCounter, deleteCounter, getCounter, addCounter } from '@/lib/counters';
 import { broadcastUpdate } from '../../sync/broadcast';
 
 /**
@@ -40,19 +40,44 @@ export async function PUT(
       );
     }
 
-    // Use Supabase updateCounter for persistence (name, value, dailyGoal)
-  const updateFields: Record<string, string | number> = { name: name.trim(), value };
-  if (typeof dailyGoal === 'number') updateFields.dailyGoal = dailyGoal;
+    // Check if counter exists, create if it doesn't
+    const currentCounter = await getCounter(id);
+    let counterToUpdate = currentCounter;
+
+    if (!currentCounter) {
+      console.log(`Counter ${id} not found, creating new counter`);
+
+      // Create a new counter with the provided data
+      const newCounter = await addCounter({
+        id,
+        name: name.trim(),
+        value: value || 0,
+        dailyGoal: dailyGoal || 0,
+        dailyCount: dailyCount || 0,
+        users: {},
+        history: {},
+        lastUpdated: Date.now()
+      });
+
+      console.log(`Created new counter ${id} with name: ${newCounter.name}`);
+      counterToUpdate = newCounter;
+    }
+
+    if (!counterToUpdate) {
+      return NextResponse.json({ error: 'Failed to create counter' }, { status: 500 });
+    }
+
+    const updateFields: Record<string, string | number> = { name: name.trim(), value };
+    if (typeof dailyGoal === 'number') updateFields.dailyGoal = dailyGoal;
 
     // Handle dailyCount adjustment
     if (typeof dailyCount === 'number') {
       updateFields.dailyCount = dailyCount;
 
       // If dailyCount is provided, recalculate today's history to match
-      const currentCounter = await getCounter(id);
-      if (currentCounter?.history) {
+      if (counterToUpdate?.history) {
         const today = getTodayStringUTC(); // Use UTC-based date
-        const adjustedHistory = { ...currentCounter.history };
+        const adjustedHistory = { ...counterToUpdate.history };
 
         if (adjustedHistory[today]) {
           // If this is a reset (dailyCount === 0), clear today's history
@@ -158,12 +183,7 @@ export async function DELETE(
     // const body = await request.json().catch(() => ({})); // removed unused
     // Use Supabase deleteCounter for persistence
     const deleted = await deleteCounter(id);
-    if (!deleted) {
-      return NextResponse.json(
-        { error: 'Counter not found' },
-        { status: 404 }
-      );
-    }
+    // Even if the counter doesn't exist, deletion is considered successful
     const response = {
       counter: { id },
       timestamp: Date.now()

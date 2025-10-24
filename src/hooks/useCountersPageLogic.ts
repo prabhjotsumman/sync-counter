@@ -278,8 +278,11 @@ export function useCountersPageLogic() {
                     saveOfflineCounters(counters.map(c => c.id === safeCounterData.id ? counter : c));
                 }
             }
-            await syncPendingChangesToServer();
-            await fetchCounters();
+            // Only sync if there are pending changes to avoid unnecessary API calls
+            const pendingChanges = getPendingChanges();
+            if (pendingChanges.length > 0) {
+                await syncPendingChangesToServer();
+            }
         } catch {
             // Fallback: if request fails, save offline
             if (modalMode === 'add') {

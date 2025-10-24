@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateCounter } from '@/lib/counters';
+import type { Counter } from '@/lib/counters';
+import { updateCounter, getCounter, addCounter } from '@/lib/counters';
 import { broadcastUpdate } from '../../../sync/broadcast';
 
 /**
@@ -48,16 +49,36 @@ export async function POST(
     const { today, currentUser } = await request.json();
     // Normalize user name: first letter capital, rest lowercase
     const normalizedUser = currentUser ? currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase() : undefined;
-    const current = await (await import('@/lib/counters')).getCounter(id);
-    console.log("currentCounter", current);
+    const current = await getCounter(id);
+    let counterToUpdate = current;
+
     if (!current) {
-      return NextResponse.json({ error: 'Counter not found' }, { status: 404 });
+      console.log(`Counter ${id} not found, creating new counter`);
+
+      // Create a new counter with basic structure
+      const newCounter = await addCounter({
+        id,
+        name: `Counter ${id.slice(-8)}`, // Use last 8 chars of ID as name
+        value: 0,
+        dailyGoal: 0,
+        dailyCount: 0,
+        users: {},
+        history: {},
+        lastUpdated: Date.now()
+      });
+
+      console.log(`Created new counter ${id} with name: ${newCounter.name}`);
+      counterToUpdate = newCounter;
+    }
+
+    if (!counterToUpdate) {
+      return NextResponse.json({ error: 'Failed to create counter' }, { status: 500 });
     }
 
     // Use UTC date for consistency across timezones
     const dateKey = normalizeToUTCDate(today);
-    const history = current.history || {};
-    const users = { ...(current.users || {}) };
+    const history = counterToUpdate.history || {};
+    const users = { ...(counterToUpdate.users || {}) };
 
     // Update today's user count
     if (normalizedUser) {
@@ -89,7 +110,7 @@ export async function POST(
     }
 
     const updatedCounter = await updateCounter(id, {
-      value: current.value + 1,
+      value: counterToUpdate.value + 1,
       users,
       history,
       dailyCount: newDailyCount

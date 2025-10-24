@@ -40,7 +40,7 @@ export function CounterModalForm({ id }: CounterModalFormProps) {
         resetDailyCount: false,
       });
     }
-  }, [modalOpen, modalMode, editingCounter, formState]);
+  }, [modalOpen, modalMode, editingCounter, formState.setValues]);
 
   const handleSave = async () => {
     const name = formState.values.name as string;
@@ -113,7 +113,7 @@ export function CounterModalForm({ id }: CounterModalFormProps) {
     setModalOpen(false);
   };
 
-  if (!modalOpen || (modalMode === 'edit' && !editingCounter)) return null;
+  if (!modalOpen) return null;
 
   return (
     <div className="bg-gray-900 rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl border border-gray-700 animate-in zoom-in duration-200">

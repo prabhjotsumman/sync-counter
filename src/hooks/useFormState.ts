@@ -214,7 +214,12 @@ export function useFormState<T extends Record<string, FormValue>>({
  * Hook for managing simple counter form state
  */
 export const useCounterFormState = (initialCounter?: Counter | null) => {
-  return useFormState({
+  return useFormState<{
+    name: string;
+    value: number;
+    dailyGoal: number;
+    resetDailyCount: boolean;
+  }>({
     fields: [
       {
         name: 'name',
@@ -224,6 +229,19 @@ export const useCounterFormState = (initialCounter?: Counter | null) => {
           const stringValue = String(value);
           if (!stringValue.trim()) return { isValid: false, error: 'Name is required' };
           if (stringValue.length > 50) return { isValid: false, error: 'Name must be 50 characters or less' };
+          return { isValid: true };
+        },
+      },
+      {
+        name: 'value',
+        initialValue: initialCounter?.value || 0,
+        required: false,
+        validate: (value: FormValue) => {
+          const numberValue = Number(value);
+          if (isNaN(numberValue)) {
+            return { isValid: false, error: 'Value must be a valid number' };
+          }
+          if (numberValue < 0) return { isValid: false, error: 'Value cannot be negative' };
           return { isValid: true };
         },
       },

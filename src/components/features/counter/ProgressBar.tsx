@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Confetti from 'react-confetti';
-import { getUserColor } from '@/lib/offlineUtils';
 import { getTodayString } from "@/utils";
+import { isGoalAchieved } from "@/utils";
 
 interface ProgressBarProps {
   counterName?: string;
@@ -22,7 +22,23 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
   // Calculate progress percentage based on daily progress toward daily goal
   const percent = max > 0 ? Math.min(100, Math.round((progressValue / max) * 100)) : 0;
   const left = Math.max(0, max - progressValue);
-  const isGoalMet = left === 0 && progressValue > 0;
+
+  // Use the utility function for consistent goal checking
+  const counterForGoalCheck: {
+    dailyGoal: number;
+    dailyCount: number;
+    value: number;
+    id: string;
+    name: string;
+  } = {
+    dailyGoal: max,
+    dailyCount: progressValue,
+    value: progressValue, // Use progressValue for consistency
+    id: 'temp',
+    name: counterName || 'temp'
+  };
+
+  const isGoalMet = isGoalAchieved(counterForGoalCheck);
   const [showConfetti, setShowConfetti] = useState(false);
   const [goalAchievedToday, setGoalAchievedToday] = useState(false);
   const [userColors, setUserColors] = useState<Record<string, string>>({});
@@ -32,15 +48,11 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
     const fetchUserColors = async () => {
       if (history?.[today]?.users) {
         const colorPromises = Object.keys(history[today].users).map(async (username) => {
-          const color = await getUserColor(username);
-          return { username, color };
+          return { username };
         });
 
         const colors = await Promise.all(colorPromises);
         const colorMap: Record<string, string> = {};
-        colors.forEach(({ username, color }) => {
-          colorMap[username] = color;
-        });
         setUserColors(colorMap);
       }
     };
@@ -125,14 +137,14 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
 
   // Trigger confetti when goal is achieved and not already shown today
   useEffect(() => {
-    if (isGoalMet && progressValue > 0 && !goalAchievedToday) {
+    if (isGoalMet && !goalAchievedToday) {
       setShowConfetti(true);
       setGoalAchievedToday(true);
       // Hide confetti after animation (adjust duration as needed)
       const timer = setTimeout(() => setShowConfetti(false), 5000);
       return () => clearTimeout(timer);
     }
-  }, [isGoalMet, progressValue, goalAchievedToday]);
+  }, [isGoalMet, goalAchievedToday]);
 
   // Reset goalAchievedToday when the day changes
   useEffect(() => {

@@ -1,8 +1,7 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useCounterContext } from '@/providers/CounterContext';
 import { useCounterLogic } from '@/hooks/useCounterLogic';
-import { getUserColor } from '@/lib/offlineUtils';
 
 export default function IncrementButton({ id }: { id: string }) {
   const { counters, handleCounterUpdate } = useCounterContext();
@@ -12,36 +11,6 @@ export default function IncrementButton({ id }: { id: string }) {
     onUpdate: handleCounterUpdate,
     currentCounter: counter,
   });
-
-  const [userColor, setUserColor] = useState('#10B981');
-
-  useEffect(() => {
-    const updateUserColor = async () => {
-      const currentUser = localStorage.getItem('syncCounterUser');
-      const color = currentUser ? await getUserColor(currentUser) : '#10B981';
-      setUserColor(color);
-    };
-
-    updateUserColor();
-
-    // Listen for storage changes to update color when user changes it
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'syncCounterUserColors' || e.key === 'syncCounterUser') {
-        updateUserColor();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    // Also listen for custom events for same-tab updates
-    const handleUserUpdate = () => updateUserColor();
-    window.addEventListener('user-color-updated', handleUserUpdate);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('user-color-updated', handleUserUpdate);
-    };
-  }, []);
 
   if (!counter) return null;
 
@@ -55,7 +24,7 @@ export default function IncrementButton({ id }: { id: string }) {
           } block`}
         style={{
           width: '100%',
-          backgroundColor: userColor,
+          backgroundColor: '#10B981',
         }}
       >
         +

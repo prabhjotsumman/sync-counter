@@ -1,36 +1,51 @@
 [
   {
-    "id": "counter-1760887011250",
-    "name": "Tes4",
-    "value": 432,
-    "lastUpdated": 1760908233378,
-    "dailyGoal": 359,
-    "dailyCount": 338,
+    "id": "counter-1761344664228",
+    "name": "N1",
+    "value": 120,
+    "lastUpdated": 1761345117736,
+    "dailyGoal": 102,
     "users": {
-      "Prabhjot": 585,
-      "Poor": 249,
-      "Yoja": 7,
-      "Farxi": 44,
-      "Ui": 43
+      "Joe": 40,
+      "Fruity": 46,
+      "Popr": 34
     },
     "history": {
-      "2025-10-19": {
+      "2025-10-24": {
         "users": {
-          "Prabhjot": 149,
-          "Poor": 39,
-          "Yoja": 35,
-          "Farxi": 72,
-          "Ui": 43
+          "Joe": 40,
+          "Fruity": 46,
+          "Popr": 34
         },
-        "total": 338,
-        "day": "Saturday"
-      },
-      "2025-10-20": {
+        "total": 120,
+        "day": "Friday"
+      }
+    },
+    "dailyCount": 120
+  },
+  {
+    "id": "counter-1761345184947",
+    "name": "N21",
+    "value": 207,
+    "lastUpdated": 1761346157937,
+    "dailyGoal": 210,
+    "dailyCount": 204,
+    "users": {
+      "Joe": 79,
+      "Fruity": 58,
+      "Popr": 56,
+      "Prabh": 1
+    },
+    "history": {
+      "2025-10-24": {
         "users": {
-          "Prabhjot": 45
+          "Joe": 84,
+          "Fruity": 62,
+          "Popr": 57,
+          "Prabh": 1
         },
-        "total": 45,
-        "day": "Sunday"
+        "total": 204,
+        "day": "Friday"
       }
     }
   }

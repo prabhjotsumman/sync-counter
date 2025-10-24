@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getUserColor, setUserColor } from '@/lib/offlineUtils';
 
 const COLOR_OPTIONS = [
   '#3B82F6', // blue-500
@@ -24,18 +23,6 @@ export default function UsernameModal({ show, value, onChange, onSubmit, onCance
 }) {
   const [selectedColor, setSelectedColor] = useState('#3B82F6');
 
-  useEffect(() => {
-    if (show) {
-      if (currentUser) {
-        getUserColor(currentUser).then((color) => {
-          setSelectedColor(color);
-        });
-      } else {
-        setSelectedColor('#3B82F6'); // default color
-      }
-    }
-  }, [show, currentUser]);
-
   // Handle click outside modal
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {
     if (e.target === e.currentTarget && onCancel) {
@@ -47,12 +34,11 @@ export default function UsernameModal({ show, value, onChange, onSubmit, onCance
 
   const handleSubmit = useCallback(() => {
     if (value.trim()) {
-      setUserColor(value.trim(), selectedColor);
       // Dispatch custom event to notify other components of color change
       window.dispatchEvent(new CustomEvent('user-color-updated'));
       onSubmit(value.trim());
     }
-  }, [value, selectedColor, onSubmit]);
+  }, [value, onSubmit]);
 
   const handleCancel = useCallback(() => {
     if (onCancel) {

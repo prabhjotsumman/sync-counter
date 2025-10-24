@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { getUserColor } from '@/lib/offlineUtils';
+import React, { useState } from 'react';
 import UserColorManager from './UserColorManager';
 
 interface UserDisplayProps {
@@ -10,29 +9,6 @@ interface UserDisplayProps {
 export default function UserDisplay({ currentUser, onUpdateUsername }: UserDisplayProps) {
   const [userColor, setUserColor] = useState('#3B82F6');
   const [showColorManager, setShowColorManager] = useState(false);
-
-  useEffect(() => {
-    const updateUserColor = async () => {
-      if (currentUser) {
-        const color = await getUserColor(currentUser);
-        setUserColor(color);
-      }
-    };
-
-    updateUserColor();
-  }, [currentUser]);
-
-  useEffect(() => {
-    const handleUserUpdate = async () => {
-      if (currentUser) {
-        const color = await getUserColor(currentUser);
-        setUserColor(color);
-      }
-    };
-
-    window.addEventListener('user-color-updated', handleUserUpdate);
-    return () => window.removeEventListener('user-color-updated', handleUserUpdate);
-  }, [currentUser]);
 
   const handleColorChange = (newColor: string) => {
     setUserColor(newColor);

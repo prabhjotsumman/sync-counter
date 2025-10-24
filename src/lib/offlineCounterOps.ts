@@ -362,17 +362,7 @@ export async function syncPendingChangesToServer(): Promise<boolean> {
             }
         }
         clearPendingChanges();
-        try {
-            const response = await fetch('/api/counters');
-            if (response.ok) {
-                const data = await response.json();
-                if (data && Array.isArray(data.counters)) {
-                    localStorage.setItem('offline_counters', JSON.stringify({ counters: data.counters, lastSync: Date.now(), lastServerSync: Date.now() }));
-                }
-            }
-        } catch (err) {
-            console.error('Failed to update offline counters after sync:', err);
-        }
+        // Note: Removed unnecessary fetch('/api/counters') call since we already have updated data
         window._syncInProgress = false;
         return true;
     } catch (error) {
