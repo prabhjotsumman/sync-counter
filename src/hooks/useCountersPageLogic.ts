@@ -16,7 +16,7 @@ import {
     resetDailyCountsForCounters
 } from '@/lib/offlineCounterOps';
 import { syncPendingIncrements, setGlobalCounterUpdateCallback, normalizeUserName } from '@/lib/offlineUtils';
-import { setUserColor, getUserColor, USER_COLOR_OPTIONS, removeUserColor } from '@/utils';
+import { setUserColor, getUserColor, USER_COLOR_OPTIONS, removeUserColor, getTodayString, getTodayWeekdayUTC } from '@/utils';
 import { broadcastUpdate } from '@/app/api/sync/broadcast';
 
 export interface CounterData {
@@ -161,10 +161,10 @@ export function useCountersPageLogic() {
                     ...(currentUser && (!counter.users || !counter.users[currentUser]) ? {
                         users: { ...counter.users, [currentUser]: 0 },
                         history: counter.history || {
-                            [new Date().toISOString().split('T')[0]]: {
+                            [getTodayString()]: {
                                 users: { [currentUser]: 0 },
                                 total: 0,
-                                day: new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
+                                day: getTodayWeekdayUTC()
                             }
                         }
                     } : {})
@@ -433,10 +433,10 @@ export function useCountersPageLogic() {
                         ...(effectiveCurrentUser ? {
                             users: { [effectiveCurrentUser]: 0 },
                             history: {
-                                [new Date().toISOString().split('T')[0]]: {
+                                [getTodayString()]: {
                                     users: { [effectiveCurrentUser]: 0 },
                                     total: 0,
-                                    day: new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
+                                    day: getTodayWeekdayUTC()
                                 }
                             }
                         } : {})
@@ -520,10 +520,10 @@ export function useCountersPageLogic() {
                     ...(fallbackEffectiveUser ? {
                         users: { [fallbackEffectiveUser]: 0 },
                         history: {
-                            [new Date().toISOString().split('T')[0]]: {
+                            [getTodayString()]: {
                                 users: { [fallbackEffectiveUser]: 0 },
                                 total: 0,
-                                day: new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
+                                day: getTodayWeekdayUTC()
                             }
                         }
                     } : {})

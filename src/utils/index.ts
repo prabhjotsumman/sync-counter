@@ -578,3 +578,10 @@ export const getCurrentUserContributionToday = (counter: Counter, contextUser?: 
   // Fallback to current users object if it represents today's count
   return counter.users?.[currentUser] || 0;
 };
+
+// Export all utility functions
+
+export {
+  getTodayString,
+  getTodayWeekdayUTC
+};

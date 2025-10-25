@@ -6,6 +6,7 @@
 
 // Feature components
 export * from './features/counter';
+export { CounterSection } from './features/CounterSection';
 
 // Form components
 export * from './forms';

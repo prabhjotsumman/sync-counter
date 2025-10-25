@@ -10,7 +10,7 @@ export default function AppHeader() {
         showTransliteration={false}
         showMeaning={true}
         autoRotate={true}
-        rotationInterval={1000 * 60} // 1 minute
+        rotationInterval={1000 *10} // 1 minute
       />
     </div>
   );

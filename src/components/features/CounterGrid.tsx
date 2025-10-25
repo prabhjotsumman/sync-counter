@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { Counter } from '@/components/features/counter';
+import { CounterSection } from '@/components/features/CounterSection';
 import { useCounterContext } from '@/providers/CounterContext';
 import { sortCountersByUserActivity, hasCurrentUserInteractedEver, hasCurrentUserInteractedToday, getCurrentUser, getTodayString, getCurrentUserContribution } from '@/utils';
 
@@ -105,71 +106,29 @@ export function CounterGrid() {
             ) : (
                 <>
                     {/* Current User's Active Counters */}
-                    {activeUserCounters.length > 0 && (
-                        <div className="mb-8">
-                            <div className="mb-4 text-center">
-                                <span className="text-sm text-green-600 font-semibold bg-green-50 px-3 py-1 rounded-full">
-                                    Your Counters ({activeUserCounters.length})
-                                </span>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                {activeUserCounters.map((counter) => (
-                                    <Counter key={counter.id} id={counter.id} />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Separator Line - Show when there are multiple groups or when debugging */}
-                    {((activeUserCounters.length > 0 && otherUserCounters.length > 0) || showAllCountersFallback || showDebugMode) && (
-                        <div className="flex items-center justify-center mb-8">
-                            <div className="flex-1 h-0.5 bg-gradient-to-r from-transparent via-gray-500 to-transparent"></div>
-                            <div className="px-6 py-3 bg-gray-200 rounded-full border-2 border-gray-400 shadow-sm">
-                                <span className="text-gray-700 text-sm font-bold">
-                                    {activeUserCounters.length > 0 ? `Other Counters (${otherUserCounters.length})` : 'All Counters Together'}
-                                </span>
-                            </div>
-                            <div className="flex-1 h-0.5 bg-gradient-to-r from-transparent via-gray-500 to-transparent"></div>
-                        </div>
-                    )}
+                    <CounterSection
+                        counters={activeUserCounters}
+                    />
 
                     {/* Other Users' Counters */}
-                    {otherUserCounters.length > 0 && (
-                        <div className="mb-8">
-                            <div className="mb-4 text-center">
-                                <span className="text-sm text-gray-500 font-medium bg-gray-50 px-3 py-1 rounded-full">
-                                    Other Counters ({otherUserCounters.length})
-                                </span>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                {otherUserCounters.map((counter) => (
-                                    <Counter key={counter.id} id={counter.id} />
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    <CounterSection
+                        title="Other Counters"
+                        counters={otherUserCounters}
+                    />
 
                     {/* Show all counters fallback - when no user is set up yet */}
                     {showAllCountersFallback && (
-                        <div className="mb-8">
-                            <div className="mb-4 text-center">
-                                <span className="text-sm text-blue-600 font-semibold bg-blue-50 px-3 py-1 rounded-full">
-                                    All Counters ({counters.length}) - Set up your username to see personalized view
-                                </span>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                {counters.map((counter) => (
-                                    <Counter key={counter.id} id={counter.id} />
-                                ))}
-                            </div>
-                        </div>
+                        <CounterSection
+                            title="All Counters"
+                            counters={counters}
+                        />
                     )}
 
                     {/* Show debug mode - when user data exists but detection fails */}
                     {showDebugMode && (
                         <div className="mb-8">
                             <div className="mb-4 text-center">
-                                <span className="text-sm text-orange-600 font-semibold bg-orange-50 px-3 py-1 rounded-full">
+                                <span className="text-sm text-orange-600 font-semibold bg-orange-50 px-3 py-1 rounded-full border border-orange-200">
                                     All Counters (Debug Mode - {counters.length}) - Check Console for User Detection Details
                                 </span>
                             </div>

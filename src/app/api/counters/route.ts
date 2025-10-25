@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCounters, addCounter } from '@/lib/counters';
 import { broadcastUpdate } from '../sync/broadcast';
+import { getTodayString, getTodayWeekdayUTC } from '@/utils';
 
 export async function GET() {
   try {
@@ -43,10 +44,10 @@ export async function POST(request: Request) {
       ...(currentUser ? {
         users: { [currentUser]: 0 },
         history: {
-          [new Date().toISOString().split('T')[0]]: {
+          [getTodayString()]: {
             users: { [currentUser]: 0 },
             total: 0,
-            day: new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
+            day: getTodayWeekdayUTC()
           }
         }
       } : {}),

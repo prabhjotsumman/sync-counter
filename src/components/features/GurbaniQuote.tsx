@@ -44,9 +44,8 @@ export const GurbaniQuote: React.FC<GurbaniQuoteProps> = ({
   return (
     <div className={`text-center ${className}`}>
       <div
-        className={`transition-all duration-500 ${
-          isVisible ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-2'
-        }`}
+        className={`transition-all duration-500 ${isVisible ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-2'
+          }`}
       >
         {/* Gurmukhi Quote */}
         <div className="mb-2">
