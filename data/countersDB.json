@@ -2,15 +2,16 @@
   {
     "id": "counter-1761344664228",
     "name": "N1",
-    "value": 233,
-    "lastUpdated": 1761405830825,
-    "dailyGoal": 102,
+    "value": 324,
+    "lastUpdated": 1761413762736,
+    "dailyGoal": 200,
     "users": {
       "Joe": 81,
       "Fruity": 46,
       "Popr": 34,
       "Yorky": 41,
-      "Prabh": 31
+      "Prabh": 88,
+      "Simran": 28
     },
     "history": {
       "2025-10-24": {
@@ -24,29 +25,29 @@
       },
       "2025-10-25": {
         "users": {
-          "Joe": 41,
-          "Yorky": 41,
-          "Prabh": 31
+          "Prabh": 36,
+          "Simran": 28
         },
-        "total": 113,
+        "total": 64,
         "day": "Saturday"
       }
     },
-    "dailyCount": 113
+    "dailyCount": 64
   },
   {
     "id": "counter-1761345184947",
-    "name": "N21",
-    "value": 351,
-    "lastUpdated": 1761405827563,
-    "dailyGoal": 210,
-    "dailyCount": 144,
+    "name": "N211",
+    "value": 415,
+    "lastUpdated": 1761413762754,
+    "dailyGoal": 200,
+    "dailyCount": 208,
     "users": {
       "Joe": 135,
       "Fruity": 58,
       "Popr": 56,
-      "Prabh": 50,
-      "Yorky": 39
+      "Prabh": 81,
+      "Yorky": 39,
+      "Simran": 22
     },
     "history": {
       "2025-10-24": {
@@ -61,11 +62,12 @@
       },
       "2025-10-25": {
         "users": {
-          "Joe": 56,
-          "Prabh": 49,
-          "Yorky": 39
+          "Joe": 60,
+          "Prabh": 84,
+          "Yorky": 42,
+          "Simran": 22
         },
-        "total": 144,
+        "total": 208,
         "day": "Saturday"
       }
     }

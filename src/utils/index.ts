@@ -134,16 +134,16 @@ export const filterCountersBySearch = (counters: Counter[], searchTerm: string):
  * Available color options for user selection
  */
 export const USER_COLOR_OPTIONS = [
-  '#3B82F6', // blue-500
-  '#EF4444', // red-500
-  '#10B981', // emerald-500
-  '#F59E0B', // amber-500
-  '#8B5CF6', // violet-500
-  '#EC4899', // pink-500
-  '#06B6D4', // cyan-500
-  '#84CC16', // lime-500
-  '#F97316', // orange-500
-  '#6366F1', // indigo-500
+  '#60A5FA', // blue-400 — calm, friendly
+  '#F87171', // red-400 — softer red
+  '#34D399', // emerald-400 — fresh green
+  '#FBBF24', // amber-400 — warm yellow-gold
+  '#A78BFA', // violet-400 — gentle purple
+  '#F472B6', // pink-400 — pleasant pink
+  '#22D3EE', // cyan-400 — clean teal-blue
+  '#A3E635', // lime-400 — energetic lime
+  '#FB923C', // orange-400 — lively but not harsh
+  '#818CF8', // indigo-400 — modern and smooth
 ];
 
 /**
@@ -223,20 +223,90 @@ export const clearAllUserColors = (): void => {
 };
 
 /**
- * Generates a lighter or darker shade of a given color
+ * Converts hex color to HSL values
+ * @param hex - Hex color string (e.g., "#ff0000")
+ * @returns HSL values as [hue, saturation, lightness]
+ */
+export const hexToHsl = (hex: string): [number, number, number] => {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+
+  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+};
+
+/**
+ * Converts HSL values to hex color
+ * @param h - Hue (0-360)
+ * @param s - Saturation (0-100)
+ * @param l - Lightness (0-100)
+ * @returns Hex color string
+ */
+export const hslToHex = (h: number, s: number, l: number): string => {
+  h /= 360;
+  s /= 100;
+  l /= 100;
+
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1/6) return p + (q - p) * 6 * t;
+    if (t < 1/2) return q;
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+  };
+
+  let r, g, b;
+
+  if (s === 0) {
+    r = g = b = l; // Achromatic
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+
+  const toHex = (c: number) => {
+    const hex = Math.round(c * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+};
+
+/**
+ * Generates a lighter or darker shade of a given color using HSL
  * @param color - Base color in hex format
  * @param percent - Percentage to lighten (positive) or darken (negative)
  * @returns Modified color in hex format
  */
 export const shadeColor = (color: string, percent: number): string => {
-  const num = parseInt(color.replace('#', ''), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = (num >> 16) + amt;
-  const G = (num >> 8 & 0x00FF) + amt;
-  const B = (num & 0x0000FF) + amt;
-  return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
-    (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
-    (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+  const [h, s, l] = hexToHsl(color);
+
+  // Adjust lightness while maintaining saturation and hue
+  const newLightness = Math.max(10, Math.min(90, l + percent));
+
+  return hslToHex(h, s, newLightness);
 };
 
 /**
@@ -248,12 +318,77 @@ export const shadeColor = (color: string, percent: number): string => {
 export const generateColorShade = (baseColor: string, shadeIndex: number): string => {
   if (shadeIndex === 0) return baseColor;
 
-  // Alternate between lighter and darker shades
-  const percent = shadeIndex % 2 === 1
-    ? 30 + (shadeIndex * 15)  // Lighter shades: 30%, 45%, 60%, etc.
-    : -(20 + (shadeIndex * 10)); // Darker shades: -20%, -30%, -40%, etc.
+  const [h, s, l] = hexToHsl(baseColor);
 
-  return shadeColor(baseColor, percent);
+  // Modern shade generation using color theory
+  let newLightness: number;
+  let newSaturation: number = s;
+
+  switch (shadeIndex) {
+    case 1:
+      // Lighter shade - increase lightness, slightly reduce saturation for softer look
+      newLightness = Math.min(85, l + 25);
+      newSaturation = Math.max(40, s - 10);
+      break;
+    case 2:
+      // Darker shade - decrease lightness, maintain saturation
+      newLightness = Math.max(20, l - 25);
+      newSaturation = Math.min(90, s + 5);
+      break;
+    case 3:
+      // Much lighter - pastel-like shade
+      newLightness = Math.min(90, l + 35);
+      newSaturation = Math.max(35, s - 15);
+      break;
+    case 4:
+      // Much darker - deeper shade
+      newLightness = Math.max(15, l - 35);
+      newSaturation = Math.min(95, s + 10);
+      break;
+    case 5:
+      // Complementary hue variation (shift hue by 30 degrees)
+      newLightness = Math.max(25, Math.min(75, l));
+      newSaturation = Math.min(85, s + 5);
+      return hslToHex((h + 30) % 360, newSaturation, newLightness);
+    case 6:
+      // Opposite complementary hue variation (shift hue by -30 degrees)
+      newLightness = Math.max(25, Math.min(75, l));
+      newSaturation = Math.min(85, s + 5);
+      return hslToHex((h + 330) % 360, newSaturation, newLightness);
+    default:
+      // For more users, use modern color variations
+      const variationIndex = ((shadeIndex - 1) % 6) + 1;
+      return generateModernColorVariation(baseColor, variationIndex);
+  }
+
+  return hslToHex(h, newSaturation, newLightness);
+};
+
+/**
+ * Generates modern color variations using color theory principles
+ * @param baseColor - The base color to generate variations from
+ * @param variationIndex - Index of the variation (1-6 for different types)
+ * @returns A modern variation of the base color
+ */
+export const generateModernColorVariation = (baseColor: string, variationIndex: number): string => {
+  const [h, s, l] = hexToHsl(baseColor);
+
+  switch (variationIndex) {
+    case 1: // Analogous (hue + 30°)
+      return hslToHex((h + 30) % 360, Math.min(90, s + 5), Math.max(30, Math.min(70, l)));
+    case 2: // Analogous (hue - 30°)
+      return hslToHex((h + 330) % 360, Math.min(90, s + 5), Math.max(30, Math.min(70, l)));
+    case 3: // Triadic (hue + 120°)
+      return hslToHex((h + 120) % 360, Math.min(85, s + 10), Math.max(35, Math.min(65, l)));
+    case 4: // Triadic (hue - 120°)
+      return hslToHex((h + 240) % 360, Math.min(85, s + 10), Math.max(35, Math.min(65, l)));
+    case 5: // Complementary (hue + 180°)
+      return hslToHex((h + 180) % 360, Math.min(80, s + 15), Math.max(40, Math.min(60, l)));
+    case 6: // Split-complementary (hue + 150°)
+      return hslToHex((h + 150) % 360, Math.min(85, s + 10), Math.max(35, Math.min(65, l)));
+    default:
+      return baseColor;
+  }
 };
 
 /**

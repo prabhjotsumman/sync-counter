@@ -71,7 +71,8 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
         <div
           className={`absolute left-0 top-0 h-full transition-all duration-700 ease-out ${isGoalMet ? 'bg-gradient-to-r from-green-400 to-green-600' : 'bg-gradient-to-r from-blue-400 to-blue-600'}`}
           style={{
-            width: `${percent}%`
+            width: `${percent}%`,
+            boxShadow: `0 0 8px ${isGoalMet ? '#10B981' : '#3B82F6'}40`,
           }}
         />
       );
@@ -106,7 +107,8 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
               left: `${leftPosition}%`,
               width: '0.1%', // Minimum visible width
               backgroundColor: userColor,
-              opacity: 0.8 // Slightly transparent for very small segments
+              opacity: 0.8, // Slightly transparent for very small segments
+              boxShadow: `0 0 4px ${userColor}40`, // Subtle glow effect
             }}
           />
         );
@@ -122,7 +124,8 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
               left: `${leftPosition}%`,
               width: `${userPercent}%`,
               backgroundColor: userColor,
-              opacity: 1
+              opacity: 1,
+              boxShadow: `0 0 6px ${userColor}50`, // Enhanced glow for larger segments
             }}
           />
         );
