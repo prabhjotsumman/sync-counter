@@ -20,7 +20,7 @@ export const CounterSection: React.FC<CounterSectionProps> = ({
         <div className={`mb-8 ${className}`}>
             {title && <div className="flex items-center justify-center mb-8">
                 <div className="flex-1 h-0.5 bg-gradient-to-r from-transparent via-gray-500 to-transparent"></div>
-                <div className="px-6 py-3 ">
+                <div className="px-6 py-3">
                     <span className="text-white text-sm font-bold">
                         {title} ({counters.length})
                     </span>

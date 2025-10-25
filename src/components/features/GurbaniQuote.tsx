@@ -18,22 +18,26 @@ export const GurbaniQuote: React.FC<GurbaniQuoteProps> = ({
   showTransliteration = false,
   showMeaning = true,
   autoRotate = true,
-  rotationInterval = 3000 // 10 seconds
+  rotationInterval = 10000 // 10 seconds default
 }) => {
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     if (!autoRotate) return;
 
     const interval = setInterval(() => {
+      // Start transition
+      setIsTransitioning(true);
       setIsVisible(false);
 
-      // Fade out, change quote, fade in
+      // After fade out, change quote and fade back in
       setTimeout(() => {
         setCurrentQuoteIndex((prev) => (prev + 1) % GURBANI_QUOTES.length);
         setIsVisible(true);
-      }, 500);
+        setIsTransitioning(false);
+      }, 300); // Shorter transition time with fixed height
     }, rotationInterval);
 
     return () => clearInterval(interval);
@@ -44,17 +48,36 @@ export const GurbaniQuote: React.FC<GurbaniQuoteProps> = ({
   return (
     <div className={`text-center ${className}`}>
       <div
-        className={`transition-all duration-500 ${isVisible ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-2'
-          }`}
+        className={`transition-all duration-300 ease-in-out ${
+          isVisible
+            ? 'opacity-100 transform translate-y-0 scale-100'
+            : 'opacity-0 transform translate-y-1 scale-95'
+        }`}
+        style={{
+          minHeight: showTransliteration && showMeaning ? '140px' :
+                    showTransliteration || showMeaning ? '120px' : '80px',
+          maxHeight: showTransliteration && showMeaning ? '180px' :
+                    showTransliteration || showMeaning ? '150px' : '120px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '0.5rem 0'
+        }}
       >
         {/* Gurmukhi Quote */}
-        <div className="mb-2">
+        <div className="mb-2 flex-shrink-0 w-full">
           <p
             className="text-lg md:text-xl spiritual-glow text-golden leading-relaxed font-medium"
             style={{
               fontFamily: 'serif',
               direction: 'ltr',
-              textAlign: 'center'
+              textAlign: 'center',
+              maxWidth: '600px',
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word',
+              margin: '0 auto',
+              lineHeight: '1.6'
             }}
           >
             {currentQuote.gurmukhi}
@@ -63,8 +86,15 @@ export const GurbaniQuote: React.FC<GurbaniQuoteProps> = ({
 
         {/* Transliteration */}
         {showTransliteration && (
-          <div className="mb-2">
-            <p className="text-sm md:text-base text-gray-300 italic font-light">
+          <div className="mb-2 flex-shrink-0 w-full">
+            <p
+              className="text-sm md:text-base text-gray-300 italic font-light"
+              style={{
+                maxWidth: '600px',
+                margin: '0 auto',
+                lineHeight: '1.4'
+              }}
+            >
               {currentQuote.transliteration}
             </p>
           </div>
@@ -72,8 +102,15 @@ export const GurbaniQuote: React.FC<GurbaniQuoteProps> = ({
 
         {/* Meaning */}
         {showMeaning && (
-          <div className="mb-2">
-            <p className="text-xs md:text-sm text-gray-400 leading-relaxed max-w-2xl mx-auto">
+          <div className="mb-1 flex-shrink-0 w-full">
+            <p
+              className="text-xs md:text-sm text-gray-400 leading-relaxed"
+              style={{
+                maxWidth: '500px',
+                margin: '0 auto',
+                lineHeight: '1.5'
+              }}
+            >
               {currentQuote.meaning}
             </p>
           </div>
