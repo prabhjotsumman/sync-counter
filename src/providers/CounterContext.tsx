@@ -30,6 +30,7 @@ interface CounterContextType {
     showUsernameModal: boolean;
     handleUsernameSubmit: (name: string, color?: string) => void;
     currentUser: string | null;
+    isLoading: boolean;
 }
 
 const CounterContext = createContext<CounterContextType | undefined>(undefined);
@@ -59,6 +60,7 @@ export const CounterProvider: React.FC<{ children: React.ReactNode }> = ({ child
         anyFullscreen,
         setAnyFullscreen,
         currentUser,
+        isLoading,
     } = useCountersPageLogic();
 
     const contextValue: CounterContextType = {
@@ -85,6 +87,7 @@ export const CounterProvider: React.FC<{ children: React.ReactNode }> = ({ child
         anyFullscreen,
         setAnyFullscreen,
         currentUser,
+        isLoading,
     };
     return (
         <CounterContext.Provider value={contextValue}>

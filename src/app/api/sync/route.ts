@@ -9,6 +9,9 @@ export async function GET(request: NextRequest) {
       addClient(controller);
 
       getCounters().then(counters => {
+        console.log('📤 Sending initial sync data:', counters.length, 'counters');
+        console.log('📋 Initial counters:', counters.map(c => ({ id: c.id, name: c.name, users: c.users })));
+
         const message = `data: ${JSON.stringify({
           type: 'initial',
           counters,

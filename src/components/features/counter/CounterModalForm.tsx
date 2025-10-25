@@ -40,7 +40,7 @@ export function CounterModalForm({ id }: CounterModalFormProps) {
         resetDailyCount: false,
       });
     }
-  }, [modalOpen, modalMode, editingCounter, formState.setValues]);
+  }, [modalOpen, modalMode, editingCounter, formState.setValues]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
     const name = formState.values.name as string;

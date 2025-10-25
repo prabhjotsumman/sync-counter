@@ -423,3 +423,158 @@ export const getUniqueUserColor = (username: string, allUsers: string[]): string
   // Generate a shade based on the user's position
   return generateColorShade(baseColor, userIndex);
 };
+
+/**
+ * Gets the current user from context or localStorage
+ * @param contextUser - Optional user from context (takes precedence)
+ * @returns The current user or null if none found
+ */
+export const getCurrentUser = (contextUser?: string | null): string | null => {
+  if (contextUser) return contextUser;
+
+  // Check if we're in a browser environment before accessing localStorage
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return localStorage.getItem('syncCounterUser') ?? null;
+  }
+
+  return null;
+};
+
+/**
+ * Checks if the current user has interacted with a counter today
+ * @param counter - The counter to check
+ * @param contextUser - Optional user from context (takes precedence)
+ * @returns true if current user has contributed to this counter today
+ */
+export const hasCurrentUserInteractedToday = (counter: Counter, contextUser?: string | null): boolean => {
+  const currentUser = getCurrentUser(contextUser);
+  if (!currentUser) return false;
+
+  const today = getTodayString();
+  const todayHistory = counter.history?.[today];
+
+  // Check today's history first
+  if (todayHistory?.users?.[currentUser] && todayHistory.users[currentUser] > 0) {
+    return true;
+  }
+
+  // Fallback to current users object (legacy support)
+  return !!(counter.users?.[currentUser] && counter.users[currentUser] > 0);
+};
+
+/**
+ * Checks if the current user has ever interacted with a counter
+ * @param counter - The counter to check
+ * @param contextUser - Optional user from context (takes precedence)
+ * @returns true if current user has contributed to this counter at any time
+ */
+export const hasCurrentUserInteractedEver = (counter: Counter, contextUser?: string | null): boolean => {
+  const currentUser = getCurrentUser(contextUser);
+  if (!currentUser) return false;
+
+  // Check today's contributions
+  if (hasCurrentUserInteractedToday(counter, contextUser)) return true;
+
+  // Check historical contributions (all days)
+  if (counter.history) {
+    for (const dayHistory of Object.values(counter.history)) {
+      if (dayHistory.users?.[currentUser] && dayHistory.users[currentUser] > 0) {
+        return true;
+      }
+    }
+  }
+
+  // Check current users object (legacy support)
+  return !!(counter.users?.[currentUser] && counter.users[currentUser] > 0);
+};
+
+/**
+ * Gets the current user's total contribution to a counter
+ * @param counter - The counter to check
+ * @param contextUser - Optional user from context (takes precedence)
+ * @returns The total number of contributions from current user
+ */
+export const getCurrentUserContribution = (counter: Counter, contextUser?: string | null): number => {
+  const currentUser = getCurrentUser(contextUser);
+  if (!currentUser) return 0;
+
+  let total = 0;
+
+  // Count today's contributions
+  if (hasCurrentUserInteractedToday(counter, contextUser)) {
+    const today = getTodayString();
+    total += counter.history?.[today]?.users?.[currentUser] || 0;
+  }
+
+  // Count historical contributions
+  if (counter.history) {
+    for (const dayHistory of Object.values(counter.history)) {
+      total += dayHistory.users?.[currentUser] || 0;
+    }
+  }
+
+  // Add current users object contributions (legacy support)
+  total += counter.users?.[currentUser] || 0;
+
+  return total;
+};
+
+/**
+ * Sorts counters so that current user's active counters appear first
+ * @param counters - Array of counters to sort
+ * @param contextUser - Optional user from context (takes precedence)
+ * @returns Sorted array with current user's counters prioritized
+ */
+export const sortCountersByUserActivity = (counters: Counter[], contextUser?: string | null): Counter[] => {
+  const currentUser = getCurrentUser(contextUser);
+  if (!currentUser) return counters;
+
+  return [...counters].sort((a, b) => {
+    const aHasInteracted = hasCurrentUserInteractedEver(a, contextUser);
+    const bHasInteracted = hasCurrentUserInteractedEver(b, contextUser);
+
+    // If one has interaction and the other doesn't, prioritize the one with interaction
+    if (aHasInteracted && !bHasInteracted) return -1;
+    if (!aHasInteracted && bHasInteracted) return 1;
+
+    // If both have interaction or both don't, sort by total contribution (descending)
+    const aContribution = getCurrentUserContribution(a, contextUser);
+    const bContribution = getCurrentUserContribution(b, contextUser);
+
+    if (aContribution !== bContribution) {
+      return bContribution - aContribution; // Higher contribution first
+    }
+
+    // If contributions are equal, sort by recent activity (today's contribution)
+    const aTodayContribution = getCurrentUserContributionToday(a, contextUser);
+    const bTodayContribution = getCurrentUserContributionToday(b, contextUser);
+
+    if (aTodayContribution !== bTodayContribution) {
+      return bTodayContribution - aTodayContribution; // More recent activity first
+    }
+
+    // If still equal, sort alphabetically by name
+    return a.name.localeCompare(b.name);
+  });
+};
+
+/**
+ * Gets the current user's contribution to a counter today
+ * @param counter - The counter to check
+ * @param contextUser - Optional user from context (takes precedence)
+ * @returns The number of contributions from current user today
+ */
+export const getCurrentUserContributionToday = (counter: Counter, contextUser?: string | null): number => {
+  const currentUser = getCurrentUser(contextUser);
+  if (!currentUser) return 0;
+
+  const today = getTodayString();
+  const todayHistory = counter.history?.[today];
+
+  if (todayHistory?.users?.[currentUser]) {
+    return todayHistory.users[currentUser];
+  }
+
+  // Fallback to current users object if it represents today's count
+  return counter.users?.[currentUser] || 0;
+};

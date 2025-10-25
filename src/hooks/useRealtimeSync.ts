@@ -41,51 +41,58 @@ export function useRealtimeSync({
     eventSource.onmessage = (event) => {
       try {
         const data: SyncEvent = JSON.parse(event.data);
+        console.log('📨 SSE Message received:', data);
+
         const callbacks = callbacksRef.current;
-        
+
         switch (data.type) {
           case 'initial':
+            console.log('🎯 Initial data received:', data.counters?.length || 0, 'counters');
             if (callbacks.onInitialData && data.counters) {
               callbacks.onInitialData(data.counters);
             }
             break;
           case 'counter_created':
+            console.log('➕ Counter created:', data.counter?.name);
             if (callbacks.onCounterCreated && data.counter) {
               callbacks.onCounterCreated(data.counter);
             }
             break;
           case 'counter_updated':
+            console.log('🔄 Counter updated:', data.counter?.name);
             if (callbacks.onCounterUpdated && data.counter) {
               callbacks.onCounterUpdated(data.counter);
             }
             break;
           case 'counter_deleted':
+            console.log('🗑️ Counter deleted:', data.counter?.name);
             if (callbacks.onCounterDeleted && data.counter) {
               callbacks.onCounterDeleted(data.counter);
             }
             break;
           case 'counter_incremented':
+            console.log('📈 Counter incremented:', data.counter?.name);
             if (callbacks.onCounterIncremented && data.counter) {
               callbacks.onCounterIncremented(data.counter);
             }
             break;
         }
       } catch (error) {
-        console.error('Error parsing sync event:', error);
+        console.error('❌ Error parsing sync event:', error, 'Raw data:', event.data);
       }
     };
 
+    eventSource.onopen = () => {
+      console.log('✅ SSE connection established successfully');
+    };
+
     eventSource.onerror = (error) => {
-      console.error('EventSource error:', error);
+      console.error('❌ EventSource error:', error);
       // Close connection on error
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
-    };
-
-    eventSource.onopen = () => {
-      console.log('SSE connection established');
     };
 
     // Cleanup on unmount or when going offline

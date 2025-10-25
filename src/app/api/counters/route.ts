@@ -22,7 +22,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
   const body = await request.json();
-  const { name, value = 0, dailyGoal, dailyCount, history } = body;
+  const { name, value = 0, dailyGoal, dailyCount, history, currentUser } = body;
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json(
@@ -39,6 +39,17 @@ export async function POST(request: Request) {
       ...(typeof dailyGoal === 'number' ? { dailyGoal } : {}),
       ...(typeof dailyCount === 'number' ? { dailyCount } : {}),
       ...(history ? { history } : {}),
+      // Initialize with current user if provided
+      ...(currentUser ? {
+        users: { [currentUser]: 0 },
+        history: {
+          [new Date().toISOString().split('T')[0]]: {
+            users: { [currentUser]: 0 },
+            total: 0,
+            day: new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
+          }
+        }
+      } : {}),
     };
 
   const created = await addCounter(newCounter);
