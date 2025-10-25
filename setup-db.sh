@@ -40,10 +40,10 @@ echo "3. Run the SQL from database-setup.sql:"
 echo ""
 cat database-setup.sql
 echo ""
-echo "4. Or run this command in your Supabase SQL Editor:"
+echo "4. Or copy and paste this SQL into your Supabase SQL Editor:"
 echo ""
 echo "--- COPY AND PASTE THIS SQL ---"
-echo ""
+cat database-setup.sql
 echo "--- END SQL ---"
 echo ""
 echo "5. After running the SQL, restart your development server:"

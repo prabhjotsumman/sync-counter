@@ -136,9 +136,21 @@ export async function POST(
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Error incrementing counter:', error);
+    console.error('❌ POST /api/counters/[id]/increment - Error incrementing counter:', error);
+
+    // Check if it's a table not found error
+    if (error instanceof Error && error.message?.includes('relation "counters" does not exist')) {
+      return NextResponse.json(
+        {
+          error: 'Database table not found. Please run the database setup SQL in your Supabase dashboard.',
+          details: 'Go to Supabase SQL Editor and run the SQL from database-setup.sql'
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Failed to increment counter' },
+      { error: 'Failed to increment counter', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

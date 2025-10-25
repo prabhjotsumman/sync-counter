@@ -65,7 +65,10 @@ export async function getCounters(): Promise<Counter[]> {
   } else {
     await ensureCountersTable();
     const { data, error } = await supabase!.from('counters').select('*').order('name', { ascending: true });
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Database error in getCounters:', error);
+      throw new Error(`Failed to fetch counters: ${error.message}`);
+    }
     return Array.isArray(data) ? (data.filter(isCounter) as unknown as Counter[]) : [];
   }
 }
@@ -97,7 +100,14 @@ export async function addCounter(counter: Counter): Promise<Counter> {
     await ensureCountersTable();
     const now = Date.now();
     const { data, error } = await supabase!.from('counters').insert([{ ...counter, lastUpdated: now }]).select().single();
-    if (error || !isCounter(data)) throw error;
+    if (error) {
+      console.error('❌ Database error in addCounter:', error);
+      throw new Error(`Failed to create counter: ${error.message}`);
+    }
+    if (!isCounter(data)) {
+      console.error('❌ Invalid counter data returned:', data);
+      throw new Error('Invalid counter data returned from database');
+    }
     return data as Counter;
   }
 }

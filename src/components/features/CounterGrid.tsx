@@ -3,7 +3,7 @@ import React from 'react';
 import { Counter } from '@/components/features/counter';
 import { CounterSection } from '@/components/features/CounterSection';
 import { useCounterContext } from '@/providers/CounterContext';
-import { sortCountersByUserActivity, hasCurrentUserInteractedEver, hasCurrentUserInteractedToday, getCurrentUser, getTodayString, getCurrentUserContribution } from '@/utils';
+import { hasCurrentUserInteractedEver, hasCurrentUserInteractedToday, getCurrentUser, getTodayString, getCurrentUserContribution } from '@/utils';
 
 export function CounterGrid() {
     const { counters, handleAddCounter, modalOpen, currentUser: contextCurrentUser, isLoading } = useCounterContext();
@@ -44,8 +44,8 @@ export function CounterGrid() {
         console.log('⏳ CounterGrid loading changed:', isLoading);
     }, [isLoading]);
 
-    // Sort counters so current user's active counters appear first
-    const sortedCounters = sortCountersByUserActivity(counters, effectiveCurrentUser);
+    // Use counters in their original order (no sorting)
+    const sortedCounters = counters;
 
     // Enhanced user detection: check if current user exists in the users object
     const activeUserCounters = sortedCounters.filter(counter =>

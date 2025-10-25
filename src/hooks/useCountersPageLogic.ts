@@ -188,17 +188,13 @@ export function useCountersPageLogic() {
     const handleInitialData = useCallback((counters: CounterData[]) => {
         console.log('🎯 handleInitialData called with:', counters.length, 'counters');
 
-        // Calculate effective user first
-        const localStorageUser = (typeof window !== 'undefined' && window.localStorage) ? localStorage.getItem('syncCounterUser') : null;
-        const effectiveUser = currentUser || localStorageUser;
-        console.log('🔄 handleInitialData - effectiveUser:', effectiveUser, { currentUser, localStorageUser });
-
+        // Log detailed counter state for debugging
         console.log('📋 Initial data details:', counters.map(c => ({
             id: c.id,
             name: c.name,
-            users: c.users,
+            dailyCount: c.dailyCount,
+            history: c.history?.[getTodayString()],
             hasCurrentUser: currentUser ? (c.users?.[currentUser] !== undefined) : false,
-            hasEffectiveUser: effectiveUser ? (c.users?.[effectiveUser] !== undefined) : false,
             hasLocalStorageUser: (() => {
                 const localUser = (typeof window !== 'undefined' && window.localStorage) ? localStorage.getItem('syncCounterUser') : null;
                 return localUser ? (c.users?.[localUser] !== undefined) : false;
@@ -216,7 +212,7 @@ export function useCountersPageLogic() {
         // Just set counters as-is without modifying users object
         console.log('🔄 Setting initial counters:', resetCounters.length);
         console.log('📋 Setting initial server counters:', resetCounters.length);
-        setCounters(resetCounters);
+        setCounters([...resetCounters]); // Force re-render with new array
         saveOfflineCounters(resetCounters);
 
         setIsLoading(false);
@@ -302,10 +298,18 @@ export function useCountersPageLogic() {
                     // If no pending changes, trust server and clear local
                     const resetCounters = resetDailyCountsForCounters(serverCounters);
 
+                    // Log detailed counter state for debugging
+                    console.log('📊 Server counters after reset:', resetCounters.map(c => ({
+                        id: c.id,
+                        name: c.name,
+                        dailyCount: c.dailyCount,
+                        history: c.history?.[getTodayString()]
+                    })));
+
                     // Just set counters as-is without modifying users object
                     console.log('🔄 Setting counters from server:', resetCounters.length);
                     console.log('📊 Setting server counters:', resetCounters.length);
-                    setCounters(resetCounters);
+                    setCounters([...resetCounters]); // Force re-render with new array
                     saveOfflineCounters(resetCounters, serverTimestamp);
 
                     clearPendingChanges();
@@ -314,9 +318,17 @@ export function useCountersPageLogic() {
                     // If there are pending changes, merge
                     const finalCounters = resetDailyCountsForCounters(mergeServerData(serverCounters));
 
+                    // Log detailed counter state for debugging
+                    console.log('📊 Merged counters after reset:', finalCounters.map(c => ({
+                        id: c.id,
+                        name: c.name,
+                        dailyCount: c.dailyCount,
+                        history: c.history?.[getTodayString()]
+                    })));
+
                     // Just set merged counters as-is without modifying users object
                     console.log('🔄 Merging counters with pending changes:', finalCounters.length);
-                    setCounters(finalCounters);
+                    setCounters([...finalCounters]); // Force re-render with new array
                     saveOfflineCounters(finalCounters, serverTimestamp);
 
                     clearPendingChanges();
@@ -327,9 +339,17 @@ export function useCountersPageLogic() {
                 if (offlineCounters.length > 0) {
                     const resetOfflineCounters = resetDailyCountsForCounters(offlineCounters);
 
+                    // Log detailed counter state for debugging
+                    console.log('📊 Offline counters after reset:', resetOfflineCounters.map(c => ({
+                        id: c.id,
+                        name: c.name,
+                        dailyCount: c.dailyCount,
+                        history: c.history?.[getTodayString()]
+                    })));
+
                     // Just set offline counters as-is without modifying users object
                     console.log('🔄 Using offline counters as fallback:', resetOfflineCounters.length);
-                    setCounters(resetOfflineCounters);
+                    setCounters([...resetOfflineCounters]); // Force re-render with new array
                 } else {
                     console.error('❌ No offline data available');
                 }
@@ -561,36 +581,190 @@ export function useCountersPageLogic() {
         }
     };
 
+    // Daily reset detection and trigger
     useEffect(() => {
-        // Always refresh counters from server when coming back online
-        let syncTimeout: NodeJS.Timeout | null = null;
-        const syncAndRefresh = async () => {
-            if (isOnline) {
-                // Sync pending increments first
-                await syncPendingIncrements((counterId, counter) => {
-                    // Update the specific counter with server data and reset daily count
-                    const resetCounter = resetDailyCountsForCounters([counter])[0];
-                    setCounters(prev => prev.map(c => c.id === counterId ? resetCounter : c));
-                });
+        console.log('🕐 Setting up daily reset detection...');
 
-                if (pendingRequests > 0) {
-                    await syncPendingChangesToServer();
-                    // Short delay to let server settle
-                    await new Promise(res => setTimeout(res, 300));
-                }
-                // Single refresh (guarded by deduping logic)
-                if (syncTimeout) clearTimeout(syncTimeout);
-                syncTimeout = setTimeout(() => {
-                    fetchCounters();
-                    syncTimeout = null;
-                }, 500);
+        let resetTimeout: NodeJS.Timeout | null = null;
+        let nextResetTime: Date;
+
+        const checkAndScheduleReset = () => {
+            const now = new Date();
+            const resetHour = 19; // 19:20 UTC
+            const resetMinute = 20;
+
+            // If it's past 19:20 UTC today, schedule reset for 19:20 UTC tomorrow
+            if (now.getUTCHours() > resetHour || (now.getUTCHours() === resetHour && now.getUTCMinutes() >= resetMinute)) {
+                const tomorrow = new Date(now);
+                tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+                tomorrow.setUTCHours(resetHour, resetMinute, 0, 0);
+                nextResetTime = tomorrow;
+                const timeUntilReset = tomorrow.getTime() - now.getTime();
+
+                console.log('📅 Daily reset scheduled for tomorrow at 19:20 UTC');
+                console.log('⏰ Time until reset:', Math.round(timeUntilReset / 1000 / 60), 'minutes');
+
+                resetTimeout = setTimeout(() => {
+                    console.log('🔄 Daily reset triggered! Resetting all counters...');
+                    triggerDailyReset();
+                }, timeUntilReset);
+            } else {
+                // Schedule reset for today at 19:20 UTC
+                const today = new Date(now);
+                today.setUTCHours(resetHour, resetMinute, 0, 0);
+                nextResetTime = today;
+                const timeUntilReset = today.getTime() - now.getTime();
+
+                console.log('📅 Daily reset scheduled for today at 19:20 UTC');
+                console.log('⏰ Time until reset:', Math.round(timeUntilReset / 1000 / 60), 'minutes');
+
+                resetTimeout = setTimeout(() => {
+                    console.log('🔄 Daily reset triggered! Resetting all counters...');
+                    triggerDailyReset();
+                }, timeUntilReset);
             }
         };
-        syncAndRefresh();
-        return () => {
-            if (syncTimeout) clearTimeout(syncTimeout);
+
+        const triggerDailyReset = () => {
+            console.log('🔄 Triggering daily reset for all counters...');
+            setCounters(prev => {
+                const resetCounters = resetDailyCountsForCounters(prev);
+                console.log('✅ Daily reset completed for', resetCounters.length, 'counters');
+
+                // Update offline storage
+                saveOfflineCounters(resetCounters);
+
+                // Force re-render by updating with a new array reference
+                console.log('🔄 Forcing state update with reset counters...');
+                return [...resetCounters];
+            });
+        };
+
+        // Check immediately and schedule reset
+        checkAndScheduleReset();
+
+        // More frequent checks every minute for the first 3 hours to ensure we don't miss the reset
+        let minuteCheckInterval: NodeJS.Timeout | null = null;
+        const now = new Date();
+        const resetHour = 19;
+        const resetMinute = 20;
+
+        if (now.getUTCHours() < resetHour || (now.getUTCHours() === resetHour && now.getUTCMinutes() < resetMinute)) {
+            const today = new Date(now);
+            today.setUTCHours(resetHour, resetMinute, 0, 0);
+            const timeUntilReset = today.getTime() - now.getTime();
+
+            if (timeUntilReset < 3 * 60 * 60 * 1000) { // If reset is within 3 hours
+                minuteCheckInterval = setInterval(() => {
+                    const currentNow = new Date();
+                    if (currentNow.getUTCHours() >= resetHour && currentNow.getUTCMinutes() >= resetMinute) {
+                        console.log('🔄 Minute check detected reset time, triggering reset...');
+                        triggerDailyReset();
+                        if (minuteCheckInterval) clearInterval(minuteCheckInterval);
+                    }
+                }, 60 * 1000); // Check every minute for the first 3 hours
+            }
         }
-    }, [isOnline, pendingRequests, fetchCounters]);
+
+        // Check for missed resets when page becomes visible or comes back online
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                console.log('👁️ Page became visible, checking for missed daily resets...');
+                const now = new Date();
+                const resetHour = 19;
+                const resetMinute = 20;
+
+                // If we're past the reset time today, trigger reset
+                if (now.getUTCHours() > resetHour || (now.getUTCHours() === resetHour && now.getUTCMinutes() >= resetMinute)) {
+                    console.log('🔄 Missed daily reset detected on visibility change, triggering reset...');
+                    triggerDailyReset();
+                }
+                // Re-schedule for next reset
+                setTimeout(checkAndScheduleReset, 1000);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Also check every hour to handle timezone changes or clock adjustments
+        const hourlyCheck = setInterval(() => {
+            const now = new Date();
+            const resetHour = 19;
+            const resetMinute = 20;
+
+            // Check if we've passed 19:20 UTC today
+            if (now.getUTCHours() > resetHour || (now.getUTCHours() === resetHour && now.getUTCMinutes() >= resetMinute)) {
+                console.log('🔄 UTC daily reset time detected, triggering reset...');
+                triggerDailyReset();
+                clearInterval(hourlyCheck);
+                // Re-schedule for next reset
+                setTimeout(checkAndScheduleReset, 1000);
+            }
+        }, 60 * 60 * 1000); // Check every hour
+
+        return () => {
+            if (resetTimeout) clearTimeout(resetTimeout);
+            if (hourlyCheck) clearInterval(hourlyCheck);
+            if (minuteCheckInterval) clearInterval(minuteCheckInterval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, []); // Only run once on mount
+
+    // Expose triggerDailyReset for manual testing (development only)
+    useEffect(() => {
+        if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+            (window as any).triggerDailyReset = () => {
+                console.log('🧪 Manual daily reset triggered for testing...');
+                console.log('📊 Current counters before reset:', counters.length, counters.map(c => ({ id: c.id, name: c.name, dailyCount: c.dailyCount })));
+
+                setCounters(prev => {
+                    const resetCounters = resetDailyCountsForCounters(prev);
+                    console.log('✅ Manual daily reset completed for', resetCounters.length, 'counters');
+
+                    // Log detailed reset results
+                    resetCounters.forEach(counter => {
+                        console.log(`🔄 ${counter.name}: dailyCount ${counter.dailyCount} -> ${counter.dailyCount}`);
+                    });
+
+                    saveOfflineCounters(resetCounters);
+                    console.log('💾 Counters saved to offline storage');
+
+                    // Force re-render by updating with a new array reference
+                    console.log('🔄 Forcing state update with reset counters...');
+                    return [...resetCounters];
+                });
+
+                // Also trigger a manual refresh of the UI
+                setTimeout(() => {
+                    console.log('🔄 Triggering manual UI refresh...');
+                    setCounters(prev => [...prev]);
+                }, 100);
+            };
+
+            // Also expose a direct reset function
+            (window as any).forceResetDailyCounts = () => {
+                console.log('🧪 Force reset triggered - setting all dailyCounts to 0...');
+                setCounters(prev => {
+                    const forceResetCounters = prev.map(counter => ({
+                        ...counter,
+                        dailyCount: 0 // Force set to 0 directly
+                    }));
+
+                    console.log('✅ Force reset completed for', forceResetCounters.length, 'counters');
+                    forceResetCounters.forEach(counter => {
+                        console.log(`🔄 ${counter.name}: dailyCount forced to 0`);
+                    });
+
+                    saveOfflineCounters(forceResetCounters);
+                    return [...forceResetCounters];
+                });
+            };
+
+            console.log('🧪 Manual daily reset functions available in console:');
+            console.log('  - window.triggerDailyReset() (normal reset)');
+            console.log('  - window.forceResetDailyCounts() (force reset to 0)');
+        }
+    }, [counters]);
 
     return {
         anyFullscreen,

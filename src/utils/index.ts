@@ -87,6 +87,17 @@ export const getTodayString = (): string => {
   return `${year}-${month}-${day}`;
 };
 
+/**
+ * Gets today's weekday name in UTC
+ * @returns Today's weekday name (e.g., "Monday", "Tuesday", etc.) in UTC
+ */
+export const getTodayWeekdayUTC = (): string => {
+  // Use UTC time to avoid timezone issues for global users
+  const now = new Date();
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return weekdays[now.getUTCDay()];
+};
+
 // ============================================================================
 // ARRAY UTILITIES
 // ============================================================================
@@ -577,11 +588,4 @@ export const getCurrentUserContributionToday = (counter: Counter, contextUser?: 
 
   // Fallback to current users object if it represents today's count
   return counter.users?.[currentUser] || 0;
-};
-
-// Export all utility functions
-
-export {
-  getTodayString,
-  getTodayWeekdayUTC
 };

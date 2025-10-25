@@ -21,11 +21,15 @@ export function ensureDailyCountsFromHistory(counters: Counter[]): Counter[] {
       const historyTotal = counter.history[today].total || 0;
       // If dailyCount doesn't match history, update it
       if (counter.dailyCount !== historyTotal) {
+        console.log(`🔄 Resetting dailyCount for ${counter.name}: ${counter.dailyCount} -> ${historyTotal}`);
         counter.dailyCount = historyTotal;
       }
     } else {
       // If no history for today, dailyCount should be 0
-      counter.dailyCount = 0;
+      if (counter.dailyCount !== 0) {
+        console.log(`🔄 Resetting dailyCount for ${counter.name}: ${counter.dailyCount} -> 0 (no history)`);
+        counter.dailyCount = 0;
+      }
     }
     return counter;
   });
@@ -33,7 +37,32 @@ export function ensureDailyCountsFromHistory(counters: Counter[]): Counter[] {
 
 // Utility function to reset dailyCount for counters based on local date
 export function resetDailyCountsForCounters(counters: Counter[]): Counter[] {
-  return ensureDailyCountsFromHistory(counters);
+  const today = getTodayString();
+  console.log('🔄 resetDailyCountsForCounters called with', counters.length, 'counters');
+  console.log('📅 Today:', today);
+
+  return counters.map(counter => {
+    // Ensure dailyCount is synchronized with history for all counters
+    if (counter.history && counter.history[today]) {
+      const historyTotal = counter.history[today].total || 0;
+      // If dailyCount doesn't match history, update it
+      if (counter.dailyCount !== historyTotal) {
+        console.log(`🔄 ${counter.name}: dailyCount ${counter.dailyCount} -> ${historyTotal} (synced with history)`);
+        counter.dailyCount = historyTotal;
+      }
+    } else {
+      // If no history for today, dailyCount should be 0
+      if (counter.dailyCount !== 0) {
+        console.log(`🔄 ${counter.name}: dailyCount ${counter.dailyCount} -> 0 (no history for today)`);
+        counter.dailyCount = 0;
+      }
+    }
+
+    // Update lastUpdated to force UI re-render
+    counter.lastUpdated = Date.now();
+
+    return counter;
+  });
 }
 
 // Update a counter locally (for name/value changes)

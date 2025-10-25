@@ -47,9 +47,17 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
   const [, forceUpdate] = useState({});
   useEffect(() => {
     // Force a re-render to ensure progress bar displays correctly
-    // This is especially important for 0% to positive% transitions
+    // This is especially important for 0% to positive% transitions and resets
     forceUpdate({});
-  }, [progressValue, percent]);
+  }, [progressValue, percent, max]);
+
+  // Also force re-render when dailyCount becomes 0 (reset)
+  useEffect(() => {
+    if (progressValue === 0 && max > 0) {
+      console.log(`🔄 ProgressBar detected reset for ${counterName}: forcing re-render`);
+      forceUpdate({});
+    }
+  }, [progressValue, max, counterName]);
 
   // Listen for color update events to force re-render
   useEffect(() => {
@@ -147,8 +155,9 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
   // Reset goalAchievedToday when the day changes
   useEffect(() => {
     const interval = setInterval(() => {
-      const currentDate = new Date().toLocaleDateString('en-CA');
-      if (currentDate !== today) {
+      const currentToday = getTodayString();
+      if (currentToday !== today) {
+        console.log('📅 Day changed in ProgressBar, resetting goal achievement state');
         setGoalAchievedToday(false);
       }
     }, 60000); // Check every minute
