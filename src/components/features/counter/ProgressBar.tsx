@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Confetti from 'react-confetti';
 import { getTodayString } from "@/utils";
 import { isGoalAchieved } from "@/utils";
+import { getUserColor, getUniqueUserColor } from "@/utils";
 
 interface ProgressBarProps {
   counterName?: string;
@@ -41,24 +42,6 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
   const isGoalMet = isGoalAchieved(counterForGoalCheck);
   const [showConfetti, setShowConfetti] = useState(false);
   const [goalAchievedToday, setGoalAchievedToday] = useState(false);
-  const [userColors, setUserColors] = useState<Record<string, string>>({});
-
-  // Get user colors when history changes
-  useEffect(() => {
-    const fetchUserColors = async () => {
-      if (history?.[today]?.users) {
-        const colorPromises = Object.keys(history[today].users).map(async (username) => {
-          return { username };
-        });
-
-        const colors = await Promise.all(colorPromises);
-        const colorMap: Record<string, string> = {};
-        setUserColors(colorMap);
-      }
-    };
-
-    fetchUserColors();
-  }, [history, today]);
 
   // Force re-render when progress value changes significantly
   const [, forceUpdate] = useState({});
@@ -67,6 +50,16 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
     // This is especially important for 0% to positive% transitions
     forceUpdate({});
   }, [progressValue, percent]);
+
+  // Listen for color update events to force re-render
+  useEffect(() => {
+    const handleColorUpdate = () => {
+      forceUpdate({});
+    };
+
+    window.addEventListener('user-color-updated', handleColorUpdate);
+    return () => window.removeEventListener('user-color-updated', handleColorUpdate);
+  }, []);
 
   const todayHistory = history?.[today];
 
@@ -91,12 +84,14 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
     }
 
     let currentPosition = 0;
+    const allUsernames = Object.keys(todayHistory.users);
 
     return Object.entries(todayHistory.users).map(([username, userCount]) => {
       const userPercent = (userCount as number / totalUserCount) * percent;
       const leftPosition = currentPosition;
 
-      const userColor = userColors[username] || '#10B981'; // Fallback to green if no color found
+      // Get unique color for this user (handles conflicts by generating shades)
+      const userColor = getUniqueUserColor(username, allUsernames);
 
       // For very small segments, ensure minimum visibility but don't create gaps
       if (userPercent < 0.1) {

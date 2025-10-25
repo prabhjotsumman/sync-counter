@@ -16,6 +16,7 @@ import {
     resetDailyCountsForCounters
 } from '@/lib/offlineCounterOps';
 import { syncPendingIncrements, setGlobalCounterUpdateCallback, normalizeUserName } from '@/lib/offlineUtils';
+import { setUserColor, getUserColor, USER_COLOR_OPTIONS, removeUserColor } from '@/utils';
 
 export interface CounterData {
     id: string;
@@ -54,6 +55,13 @@ export function useCountersPageLogic() {
             name = normalizeUserName(name);
             localStorage.setItem('syncCounterUser', name);
             setCurrentUser(name);
+
+            // Only assign default color if user doesn't have one stored
+            const userColors = JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
+            if (!userColors[name]) {
+                // User doesn't have a color, assign default
+                setUserColor(name, '#3B82F6');
+            }
         }
     }, []);
 
@@ -64,9 +72,25 @@ export function useCountersPageLogic() {
         });
     }, [setCounters]);
 
-    const handleUsernameSubmit = (name: string) => {
+    const handleUsernameSubmit = (name: string, color?: string) => {
         if (name && name.trim()) {
             const normalized = normalizeUserName(name.trim());
+
+            // If this is an update (currentUser exists and is different from new name)
+            if (currentUser && currentUser !== normalized) {
+                // Transfer color from old username to new username
+                const oldUserColor = getUserColor(currentUser);
+                setUserColor(normalized, color || oldUserColor);
+                // Remove old username's color
+                removeUserColor(currentUser);
+            } else if (color) {
+                // New user or updating color
+                setUserColor(normalized, color);
+            } else if (!currentUser) {
+                // Brand new user without color selection
+                setUserColor(normalized, '#3B82F6');
+            }
+
             localStorage.setItem('syncCounterUser', normalized);
             setCurrentUser(normalized);
             setShowUsernameModal(false);

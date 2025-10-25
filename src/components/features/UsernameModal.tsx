@@ -1,27 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
-
-const COLOR_OPTIONS = [
-  '#3B82F6', // blue-500
-  '#EF4444', // red-500
-  '#10B981', // emerald-500
-  '#F59E0B', // amber-500
-  '#8B5CF6', // violet-500
-  '#EC4899', // pink-500
-  '#06B6D4', // cyan-500
-  '#84CC16', // lime-500
-  '#F97316', // orange-500
-  '#6366F1', // indigo-500
-];
+import { USER_COLOR_OPTIONS, getUserColor, setUserColor } from "@/utils";
 
 export default function UsernameModal({ show, value, onChange, onSubmit, onCancel, currentUser }: {
   show: boolean;
   value: string;
   onChange: (val: string) => void;
-  onSubmit: (username: string) => void;
+  onSubmit: (username: string, color?: string) => void;
   onCancel?: () => void;
   currentUser?: string | null;
 }) {
   const [selectedColor, setSelectedColor] = useState('#3B82F6');
+
+  // Load current user's color when in update mode
+  useEffect(() => {
+    if (currentUser) {
+      const currentColor = getUserColor(currentUser);
+      setSelectedColor(currentColor);
+    } else {
+      setSelectedColor('#3B82F6'); // Default for new users
+    }
+  }, [currentUser]);
 
   // Handle click outside modal
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {
@@ -34,11 +32,15 @@ export default function UsernameModal({ show, value, onChange, onSubmit, onCance
 
   const handleSubmit = useCallback(() => {
     if (value.trim()) {
+      // Ensure the color is stored for the new/changed username
+      const finalUsername = value.trim();
+      setUserColor(finalUsername, selectedColor);
+
       // Dispatch custom event to notify other components of color change
       window.dispatchEvent(new CustomEvent('user-color-updated'));
-      onSubmit(value.trim());
+      onSubmit(finalUsername, selectedColor);
     }
-  }, [value, onSubmit]);
+  }, [value, selectedColor, onSubmit]);
 
   const handleCancel = useCallback(() => {
     if (onCancel) {
@@ -46,8 +48,20 @@ export default function UsernameModal({ show, value, onChange, onSubmit, onCance
     }
   }, [onCancel]);
 
-  // Handle keyboard events
+  // Handle color selection
+  const handleColorSelect = useCallback((color: string) => {
+    setSelectedColor(color);
+    // Store color immediately for current user
+    if (currentUser) {
+      setUserColor(currentUser, color);
+      window.dispatchEvent(new CustomEvent('user-color-updated'));
+    }
+  }, [currentUser]);
+
+  // Handle keyboard events - combined single useEffect
   useEffect(() => {
+    if (!show) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && onCancel) {
         onCancel();
@@ -58,7 +72,7 @@ export default function UsernameModal({ show, value, onChange, onSubmit, onCance
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onCancel, value, handleSubmit]);
+  }, [show, onCancel, value, handleSubmit]);
 
   if (!show) return null;
 
@@ -91,10 +105,10 @@ export default function UsernameModal({ show, value, onChange, onSubmit, onCance
             Choose your color:
           </label>
           <div className="grid grid-cols-5 gap-2">
-            {COLOR_OPTIONS.map((color) => (
+            {USER_COLOR_OPTIONS.map((color) => (
               <button
                 key={color}
-                onClick={() => setSelectedColor(color)}
+                onClick={() => handleColorSelect(color)}
                 className={`w-10 h-10 rounded-lg border-2 transition-all duration-200 ${selectedColor === color
                     ? 'border-white scale-110'
                     : 'border-gray-600 hover:border-gray-400'

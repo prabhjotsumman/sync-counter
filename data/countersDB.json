@@ -2,13 +2,15 @@
   {
     "id": "counter-1761344664228",
     "name": "N1",
-    "value": 120,
-    "lastUpdated": 1761345117736,
+    "value": 233,
+    "lastUpdated": 1761405830825,
     "dailyGoal": 102,
     "users": {
-      "Joe": 40,
+      "Joe": 81,
       "Fruity": 46,
-      "Popr": 34
+      "Popr": 34,
+      "Yorky": 41,
+      "Prabh": 31
     },
     "history": {
       "2025-10-24": {
@@ -19,22 +21,32 @@
         },
         "total": 120,
         "day": "Friday"
+      },
+      "2025-10-25": {
+        "users": {
+          "Joe": 41,
+          "Yorky": 41,
+          "Prabh": 31
+        },
+        "total": 113,
+        "day": "Saturday"
       }
     },
-    "dailyCount": 120
+    "dailyCount": 113
   },
   {
     "id": "counter-1761345184947",
     "name": "N21",
-    "value": 207,
-    "lastUpdated": 1761346157937,
+    "value": 351,
+    "lastUpdated": 1761405827563,
     "dailyGoal": 210,
-    "dailyCount": 204,
+    "dailyCount": 144,
     "users": {
-      "Joe": 79,
+      "Joe": 135,
       "Fruity": 58,
       "Popr": 56,
-      "Prabh": 1
+      "Prabh": 50,
+      "Yorky": 39
     },
     "history": {
       "2025-10-24": {
@@ -46,6 +58,15 @@
         },
         "total": 204,
         "day": "Friday"
+      },
+      "2025-10-25": {
+        "users": {
+          "Joe": 56,
+          "Prabh": 49,
+          "Yorky": 39
+        },
+        "total": 144,
+        "day": "Saturday"
       }
     }
   }

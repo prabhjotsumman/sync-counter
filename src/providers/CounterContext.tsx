@@ -28,7 +28,8 @@ interface CounterContextType {
     syncPendingChangesToServer: () => Promise<void>;
     fetchCounters: () => Promise<void>;
     showUsernameModal: boolean;
-    handleUsernameSubmit: (name: string) => void;
+    handleUsernameSubmit: (name: string, color?: string) => void;
+    currentUser: string | null;
 }
 
 const CounterContext = createContext<CounterContextType | undefined>(undefined);
@@ -57,6 +58,7 @@ export const CounterProvider: React.FC<{ children: React.ReactNode }> = ({ child
         handleUsernameSubmit,
         anyFullscreen,
         setAnyFullscreen,
+        currentUser,
     } = useCountersPageLogic();
 
     const contextValue: CounterContextType = {
@@ -82,6 +84,7 @@ export const CounterProvider: React.FC<{ children: React.ReactNode }> = ({ child
         handleUsernameSubmit,
         anyFullscreen,
         setAnyFullscreen,
+        currentUser,
     };
     return (
         <CounterContext.Provider value={contextValue}>

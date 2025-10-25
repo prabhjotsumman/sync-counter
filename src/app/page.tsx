@@ -37,7 +37,7 @@ export default function Page() {
         show={showUsernameModal}
         value={usernameInput}
         onChange={setUsernameInput}
-        onSubmit={(username) => handleUsernameSubmit(username)}
+        onSubmit={(username, color) => handleUsernameSubmit(username, color)}
         onCancel={() => setShowUsernameModal(false)}
         currentUser={currentUser}
       />

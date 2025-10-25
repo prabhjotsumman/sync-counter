@@ -1,16 +1,42 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCounterContext } from '@/providers/CounterContext';
 import { useCounterLogic } from '@/hooks/useCounterLogic';
+import { getUserColor } from '@/utils';
 
 export default function IncrementButton({ id }: { id: string }) {
-  const { counters, handleCounterUpdate } = useCounterContext();
+  const { counters, handleCounterUpdate, currentUser } = useCounterContext();
   const counter = counters.find(c => c.id === id);
   const { lastAction, handleIncrement } = useCounterLogic({
     id,
     onUpdate: handleCounterUpdate,
     currentCounter: counter,
   });
+
+  const [userColor, setUserColor] = useState('#10B981');
+
+  // Update color when current user changes or when color updates occur
+  useEffect(() => {
+    if (currentUser) {
+      // For increment button, we only need to consider the current user
+      // since it's a single-user action, but we'll use the same logic for consistency
+      setUserColor(getUserColor(currentUser));
+    } else {
+      setUserColor('#10B981');
+    }
+  }, [currentUser]);
+
+  // Listen for color update events
+  useEffect(() => {
+    const handleColorUpdate = () => {
+      if (currentUser) {
+        setUserColor(getUserColor(currentUser));
+      }
+    };
+
+    window.addEventListener('user-color-updated', handleColorUpdate);
+    return () => window.removeEventListener('user-color-updated', handleColorUpdate);
+  }, [currentUser]);
 
   if (!counter) return null;
 
@@ -24,7 +50,7 @@ export default function IncrementButton({ id }: { id: string }) {
           } block`}
         style={{
           width: '100%',
-          backgroundColor: '#10B981',
+          backgroundColor: userColor,
         }}
       >
         +

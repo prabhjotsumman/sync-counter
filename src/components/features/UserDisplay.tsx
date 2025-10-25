@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import UserColorManager from './UserColorManager';
+import { getUserColor } from '@/utils';
 
 interface UserDisplayProps {
   currentUser: string | null;
@@ -7,14 +8,37 @@ interface UserDisplayProps {
 }
 
 export default function UserDisplay({ currentUser, onUpdateUsername }: UserDisplayProps) {
-  const [userColor, setUserColor] = useState('#3B82F6');
   const [showColorManager, setShowColorManager] = useState(false);
+  const [userColor, setUserColor] = useState('#3B82F6');
 
   const handleColorChange = (newColor: string) => {
-    setUserColor(newColor);
-    // Dispatch event to notify other components
-    window.dispatchEvent(new CustomEvent('user-color-updated'));
+    if (currentUser) {
+      // This will be handled by the UserColorManager component
+      // which will update the color in localStorage
+      window.dispatchEvent(new CustomEvent('user-color-updated'));
+    }
   };
+
+  // Update color when current user changes or when color updates occur
+  useEffect(() => {
+    if (currentUser) {
+      setUserColor(getUserColor(currentUser));
+    } else {
+      setUserColor('#3B82F6');
+    }
+  }, [currentUser]);
+
+  // Listen for color update events
+  useEffect(() => {
+    const handleColorUpdate = () => {
+      if (currentUser) {
+        setUserColor(getUserColor(currentUser));
+      }
+    };
+
+    window.addEventListener('user-color-updated', handleColorUpdate);
+    return () => window.removeEventListener('user-color-updated', handleColorUpdate);
+  }, [currentUser]);
 
   if (!currentUser) return null;
 

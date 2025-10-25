@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { USER_COLOR_OPTIONS, getUserColor, setUserColor, getAllUserColors, clearAllUserColors, generateColorShade } from "@/utils";
 
 /**
  * Props for the UserColorManager component
@@ -7,16 +8,6 @@ interface UserColorManagerProps {
   currentUser: string;
   onColorChange?: (color: string) => void;
   className?: string;
-}
-
-/**
- * Color option interface
- */
-interface ColorOption {
-  color: string;
-  label: string;
-  isAvailable: boolean;
-  assignedTo?: string;
 }
 
 /**
@@ -29,18 +20,65 @@ export const UserColorManager: React.FC<UserColorManagerProps> = ({
   className = ''
 }) => {
   const [selectedColor, setSelectedColor] = useState<string>('');
-  const [availableColors, setAvailableColors] = useState<string[]>([]);
+  const [availableColors, setAvailableColors] = useState<string[]>(USER_COLOR_OPTIONS);
   const [userColors, setUserColors] = useState<Record<string, string>>({});
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [error, setError] = useState<string>('');
+
+  // Load user colors and set initial selected color
+  useEffect(() => {
+    const allColors = getAllUserColors();
+    setUserColors(allColors);
+
+    // Set current user's color
+    const currentUserColor = getUserColor(currentUser);
+    setSelectedColor(currentUserColor);
+
+    // Update available colors (exclude already assigned ones)
+    const assignedColors = Object.values(allColors);
+    setAvailableColors(USER_COLOR_OPTIONS.filter(color => !assignedColors.includes(color) || color === currentUserColor));
+  }, [currentUser]);
+
+  // Listen for color update events
+  useEffect(() => {
+    const handleColorUpdate = () => {
+      const allColors = getAllUserColors();
+      setUserColors(allColors);
+
+      // Set current user's color
+      const currentUserColor = getUserColor(currentUser);
+      setSelectedColor(currentUserColor);
+
+      // Update available colors (exclude already assigned ones)
+      const assignedColors = Object.values(allColors);
+      setAvailableColors(USER_COLOR_OPTIONS.filter(color => !assignedColors.includes(color) || color === currentUserColor));
+    };
+
+    window.addEventListener('user-color-updated', handleColorUpdate);
+    return () => window.removeEventListener('user-color-updated', handleColorUpdate);
+  }, [currentUser]);
 
   const handleColorSelect = async (color: string) => {
     if (currentUser && color !== selectedColor) {
       setError('');
 
       try {
+        // Update the color for current user
+        setUserColor(currentUser, color);
         setSelectedColor(color);
+
+        // Refresh user colors
+        const allColors = getAllUserColors();
+        setUserColors(allColors);
+
+        // Update available colors
+        const assignedColors = Object.values(allColors);
+        setAvailableColors(USER_COLOR_OPTIONS.filter(c => !assignedColors.includes(c) || c === color));
+
         onColorChange?.(color);
+
+        // Dispatch event to notify other components
+        window.dispatchEvent(new CustomEvent('user-color-updated'));
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Failed to update color');
       }
@@ -49,7 +87,12 @@ export const UserColorManager: React.FC<UserColorManagerProps> = ({
 
   const handleResetColors = async () => {
     try {
+      clearAllUserColors();
       setUserColors({});
+      setAvailableColors(USER_COLOR_OPTIONS);
+      setSelectedColor('#3B82F6'); // Reset to default
+      onColorChange?.('#3B82F6');
+      window.dispatchEvent(new CustomEvent('user-color-updated'));
     } catch (error) {
       setError('Failed to reset colors');
     }
@@ -62,22 +105,6 @@ export const UserColorManager: React.FC<UserColorManagerProps> = ({
       </div>
     );
   }
-
-  const colorOptions: ColorOption[] = [
-    { color: '#3B82F6', label: 'Blue', isAvailable: availableColors.includes('#3B82F6') },
-    { color: '#EF4444', label: 'Red', isAvailable: availableColors.includes('#EF4444') },
-    { color: '#10B981', label: 'Green', isAvailable: availableColors.includes('#10B981') },
-    { color: '#F59E0B', label: 'Amber', isAvailable: availableColors.includes('#F59E0B') },
-    { color: '#8B5CF6', label: 'Violet', isAvailable: availableColors.includes('#8B5CF6') },
-    { color: '#EC4899', label: 'Pink', isAvailable: availableColors.includes('#EC4899') },
-    { color: '#06B6D4', label: 'Cyan', isAvailable: availableColors.includes('#06B6D4') },
-    { color: '#84CC16', label: 'Lime', isAvailable: availableColors.includes('#84CC16') },
-    { color: '#F97316', label: 'Orange', isAvailable: availableColors.includes('#F97316') },
-    { color: '#6366F1', label: 'Indigo', isAvailable: availableColors.includes('#6366F1') },
-  ].map(option => ({
-    ...option,
-    assignedTo: Object.keys(userColors).find(user => userColors[user] === option.color)
-  }));
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -102,57 +129,84 @@ export const UserColorManager: React.FC<UserColorManagerProps> = ({
       <div>
         <div className="text-sm text-gray-600 mb-3">Available Colors</div>
         <div className="grid grid-cols-5 gap-2">
-          {colorOptions.map(({ color, label, isAvailable, assignedTo }) => (
-            <button
-              key={color}
-              onClick={() => isAvailable && handleColorSelect(color)}
-              disabled={!isAvailable}
-              className={`relative w-10 h-10 rounded-full border-2 transition-all ${
-                selectedColor === color
-                  ? 'border-gray-800 scale-110 shadow-lg'
-                  : isAvailable
-                    ? 'border-gray-300 hover:border-gray-400'
-                    : 'border-gray-200 cursor-not-allowed'
-              }`}
-              style={{ backgroundColor: color }}
-              title={isAvailable ? `Select ${label}` : `Unavailable - assigned to ${assignedTo || 'another user'}`}
-            >
-              {selectedColor === color && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-3 h-3 bg-white rounded-full border border-gray-800" />
-                </div>
-              )}
-            </button>
-          ))}
+          {USER_COLOR_OPTIONS.map((color) => {
+            const isSelected = selectedColor === color;
+            const isAssignedToOther = userColors[currentUser] !== color && Object.values(userColors).includes(color);
+
+            return (
+              <button
+                key={color}
+                onClick={() => handleColorSelect(color)}
+                disabled={isAssignedToOther}
+                className={`relative w-10 h-10 rounded-full border-2 transition-all ${
+                  isSelected
+                    ? 'border-gray-800 scale-110 shadow-lg'
+                    : isAssignedToOther
+                      ? 'border-gray-200 cursor-not-allowed opacity-50'
+                      : 'border-gray-300 hover:border-gray-400'
+                }`}
+                style={{ backgroundColor: color }}
+                title={isAssignedToOther ? `Unavailable - assigned to ${Object.keys(userColors).find(user => userColors[user] === color)}` : `Select ${color}`}
+              >
+                {isSelected && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-3 h-3 bg-white rounded-full border border-gray-800" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* User Color Assignments (Collapsible) */}
-      {Object.keys(userColors).length > 0 && (
-        <div>
-          <button
-            onClick={() => setShowAllUsers(!showAllUsers)}
-            className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-          >
-            {showAllUsers ? 'Hide' : 'Show'} all user colors ({Object.keys(userColors).length})
-          </button>
+      {/* Shade Preview - Show how progress bar will look with multiple users */}
+      {Object.keys(userColors).length > 1 && (() => {
+        // Check if current user's color is shared with other users
+        const usersWithSameColor = Object.entries(userColors)
+          .filter(([_, color]) => color === selectedColor)
+          .map(([username, _]) => username);
 
-          {showAllUsers && (
-            <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
-              {Object.entries(userColors).map(([username, color]) => (
-                <div key={username} className="flex items-center gap-2 text-sm">
-                  <div
-                    className="w-4 h-4 rounded-full border border-gray-300"
-                    style={{ backgroundColor: color }}
-                  />
-                  <span className="font-medium">{username}</span>
-                  <span className="text-gray-500 font-mono text-xs">{color}</span>
-                </div>
-              ))}
+        if (usersWithSameColor.length > 1) {
+          return (
+            <div className="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-600">
+              <div className="text-sm text-gray-400 mb-3">Progress Bar Preview (Multiple Users)</div>
+              <div className="text-xs text-gray-500 mb-2">
+                When multiple users have the same color, the progress bar shows different shades:
+              </div>
+              <div className="flex gap-1 mb-2">
+                <div className="text-xs text-gray-500">Users:</div>
+                {usersWithSameColor.map((username, index) => (
+                  <span key={username} className="text-xs px-2 py-1 rounded" style={{
+                    backgroundColor: generateColorShade(selectedColor, index),
+                    color: 'white'
+                  }}>
+                    {username}{index === 0 ? ' (You)' : ''}
+                  </span>
+                ))}
+              </div>
+              <div className="w-full h-4 bg-gray-700 rounded relative overflow-hidden">
+                {usersWithSameColor.map((username, index) => {
+                  const shade = generateColorShade(selectedColor, index);
+                  const widthPercent = 100 / usersWithSameColor.length;
+
+                  return (
+                    <div
+                      key={username}
+                      className="absolute top-0 h-full transition-all duration-300"
+                      style={{
+                        left: `${index * widthPercent}%`,
+                        width: `${widthPercent}%`,
+                        backgroundColor: shade
+                      }}
+                    />
+                  );
+                })}
+              </div>
             </div>
-          )}
-        </div>
-      )}
+          );
+        }
+        return null;
+      })()}
 
       {/* Reset Button */}
       <div className="pt-2 border-t border-gray-200">

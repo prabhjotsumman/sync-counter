@@ -125,3 +125,166 @@ export const filterCountersBySearch = (counters: Counter[], searchTerm: string):
     counter.id.toLowerCase().includes(term)
   );
 };
+
+// ============================================================================
+// USER COLOR UTILITIES
+// ============================================================================
+
+/**
+ * Available color options for user selection
+ */
+export const USER_COLOR_OPTIONS = [
+  '#3B82F6', // blue-500
+  '#EF4444', // red-500
+  '#10B981', // emerald-500
+  '#F59E0B', // amber-500
+  '#8B5CF6', // violet-500
+  '#EC4899', // pink-500
+  '#06B6D4', // cyan-500
+  '#84CC16', // lime-500
+  '#F97316', // orange-500
+  '#6366F1', // indigo-500
+];
+
+/**
+ * Gets the stored color for a specific user
+ * @param username - The username to get color for
+ * @returns The user's color or default blue if not found
+ */
+export const getUserColor = (username: string): string => {
+  if (typeof window === 'undefined') return '#3B82F6';
+
+  try {
+    const userColors = JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
+    return userColors[username] || '#3B82F6';
+  } catch {
+    return '#3B82F6';
+  }
+};
+
+/**
+ * Sets the color for a specific user
+ * @param username - The username to set color for
+ * @param color - The color hex code
+ */
+export const setUserColor = (username: string, color: string): void => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const userColors = JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
+    userColors[username] = color;
+    localStorage.setItem('syncCounterUserColors', JSON.stringify(userColors));
+  } catch (error) {
+    console.error('Failed to save user color:', error);
+  }
+};
+
+/**
+ * Gets all user colors
+ * @returns Object mapping usernames to their colors
+ */
+export const getAllUserColors = (): Record<string, string> => {
+  if (typeof window === 'undefined') return {};
+
+  try {
+    return JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
+  } catch {
+    return {};
+  }
+};
+
+/**
+ * Removes a user's color
+ * @param username - The username to remove color for
+ */
+export const removeUserColor = (username: string): void => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const userColors = JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
+    delete userColors[username];
+    localStorage.setItem('syncCounterUserColors', JSON.stringify(userColors));
+  } catch (error) {
+    console.error('Failed to remove user color:', error);
+  }
+};
+
+/**
+ * Clears all user colors
+ */
+export const clearAllUserColors = (): void => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.removeItem('syncCounterUserColors');
+  } catch (error) {
+    console.error('Failed to clear user colors:', error);
+  }
+};
+
+/**
+ * Generates a lighter or darker shade of a given color
+ * @param color - Base color in hex format
+ * @param percent - Percentage to lighten (positive) or darken (negative)
+ * @returns Modified color in hex format
+ */
+export const shadeColor = (color: string, percent: number): string => {
+  const num = parseInt(color.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = (num >> 16) + amt;
+  const G = (num >> 8 & 0x00FF) + amt;
+  const B = (num & 0x0000FF) + amt;
+  return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+    (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+    (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+};
+
+/**
+ * Generates distinct shades for users with the same color
+ * @param baseColor - The base color to generate shades from
+ * @param shadeIndex - Index of the shade (0 = base, 1 = lighter, 2 = darker, etc.)
+ * @returns A shade of the base color
+ */
+export const generateColorShade = (baseColor: string, shadeIndex: number): string => {
+  if (shadeIndex === 0) return baseColor;
+
+  // Alternate between lighter and darker shades
+  const percent = shadeIndex % 2 === 1
+    ? 30 + (shadeIndex * 15)  // Lighter shades: 30%, 45%, 60%, etc.
+    : -(20 + (shadeIndex * 10)); // Darker shades: -20%, -30%, -40%, etc.
+
+  return shadeColor(baseColor, percent);
+};
+
+/**
+ * Gets a unique color for a user in a specific context (e.g., progress bar)
+ * Handles conflicts by generating shades when multiple users have the same color
+ * @param username - The username to get color for
+ * @param allUsers - Array of all usernames in the context
+ * @returns A unique color (potentially a shade) for the user
+ */
+export const getUniqueUserColor = (username: string, allUsers: string[]): string => {
+  const baseColor = getUserColor(username);
+  const colorCounts: Record<string, string[]> = {};
+
+  // Count how many users have each color
+  allUsers.forEach(user => {
+    const userColor = getUserColor(user);
+    if (!colorCounts[userColor]) {
+      colorCounts[userColor] = [];
+    }
+    colorCounts[userColor].push(user);
+  });
+
+  // If this color is only used by one user, return the base color
+  if (colorCounts[baseColor].length === 1) {
+    return baseColor;
+  }
+
+  // Find the index of this user among users with the same color
+  const usersWithSameColor = colorCounts[baseColor];
+  const userIndex = usersWithSameColor.indexOf(username);
+
+  // Generate a shade based on the user's position
+  return generateColorShade(baseColor, userIndex);
+};
