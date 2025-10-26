@@ -26,7 +26,10 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
   className = ''
 }) => {
   const [showCustomization, setShowCustomization] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>((counter as ExtendedCounter).customImage || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(() => {
+    const extendedCounter = counter as ExtendedCounter;
+    return extendedCounter.customImage || null;
+  });
   const [textValue, setTextValue] = useState((counter as ExtendedCounter).customText || '');
   const [textSize, setTextSize] = useState<'sm' | 'md' | 'lg' | 'xl'>((counter as ExtendedCounter).customTextSize || 'md');
   const [textColor, setTextColor] = useState<'white' | 'golden' | 'yellow' | 'orange'>((counter as ExtendedCounter).customTextColor || 'white');
@@ -47,6 +50,19 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     }
   }, [showCustomization]);
 
+  // Load fallback image from localStorage if counter data doesn't have one
+  useEffect(() => {
+    const extendedCounter = counter as ExtendedCounter;
+    const savedImages = safeGetItem('counterCustomImages');
+    const fallbackImage = savedImages[`${counter.id}_fallback`] || savedImages[counter.id];
+
+    if (fallbackImage && !imagePreview && !extendedCounter.customImage) {
+      console.log('🔄 Loading image from localStorage fallback in customization');
+      setImagePreview(fallbackImage);
+      onUpdate({ customImage: fallbackImage } as Partial<ExtendedCounter>);
+    }
+  }, [counter, imagePreview, onUpdate]);
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     console.log('📁 File input triggered');
     const file = event.target.files?.[0];
@@ -59,16 +75,30 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
         setImagePreview(base64Image);
         onUpdate({ customImage: base64Image } as Partial<ExtendedCounter>);
 
-        // Only save image to localStorage if under reasonable size limit
+        // Always save to localStorage as fallback (try anyway)
         try {
+          const savedImages = safeGetItem('counterCustomImages');
+          savedImages[`${counter.id}_fallback`] = base64Image;
+          safeSetItem('counterCustomImages', savedImages);
+          console.log('💾 Image saved to localStorage as fallback');
+
+          // Also try to save the main entry (for small images)
           if (base64Image.length < 500000) { // 500KB limit
-            const savedImages = safeGetItem('counterCustomImages');
             savedImages[counter.id] = base64Image;
             safeSetItem('counterCustomImages', savedImages);
           }
+
+          // Clean up old fallback entries periodically (keep only last 10)
+          const fallbackKeys = Object.keys(savedImages).filter(key => key.endsWith('_fallback'));
+          if (fallbackKeys.length > 10) {
+            fallbackKeys.sort().slice(0, fallbackKeys.length - 10).forEach(key => {
+              delete savedImages[key];
+            });
+            safeSetItem('counterCustomImages', savedImages);
+            console.log('🧹 Cleaned up old localStorage image entries');
+          }
         } catch (error) {
-          console.warn('⚠️ Could not save image to localStorage (quota exceeded):', error);
-          // Image still works, just not cached locally
+          console.warn('⚠️ Could not save image to localStorage:', error);
         }
       };
       reader.readAsDataURL(file);
@@ -84,6 +114,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     // Safely remove from localStorage
     const savedImages = safeGetItem('counterCustomImages');
     delete savedImages[counter.id];
+    delete savedImages[`${counter.id}_fallback`];
     safeSetItem('counterCustomImages', savedImages);
   };
 

@@ -157,22 +157,56 @@ export const USER_COLOR_OPTIONS = [
   '#818CF8', // indigo-400 — modern and smooth
 ];
 
+const DEFAULT_USER_COLOR = '#3B82F6';
+let userColorCache: Record<string, string> | null = null;
+
+const ensureUserColorCache = (): Record<string, string> => {
+  if (userColorCache) {
+    return userColorCache;
+  }
+
+  if (typeof window === 'undefined') {
+    userColorCache = {};
+    return userColorCache;
+  }
+
+  try {
+    userColorCache = JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
+  } catch {
+    userColorCache = {};
+  }
+
+  return userColorCache!;
+};
+
+const persistUserColors = (colors: Record<string, string>) => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.setItem('syncCounterUserColors', JSON.stringify(colors));
+  } catch (error) {
+    console.error('Failed to save user colors:', error);
+  }
+};
+
 /**
  * Gets the stored color for a specific user
  * @param username - The username to get color for
  * @returns The user's color or default blue if not found
  */
 export const getUserColor = (username: string): string => {
-  if (typeof window === 'undefined') return '#3B82F6';
-
-  try {
-    const userColors = JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
-    const color = userColors[username] || '#3B82F6';
-    console.log(`🔍 getUserColor: Retrieved color ${color} for user ${username}`);
-    return color;
-  } catch {
-    return '#3B82F6';
+  if (!username) {
+    return DEFAULT_USER_COLOR;
   }
+
+  if (typeof window === 'undefined') {
+    return userColorCache?.[username] ?? DEFAULT_USER_COLOR;
+  }
+
+  const userColors = ensureUserColorCache();
+  const color = userColors[username] || DEFAULT_USER_COLOR;
+  console.log(`🔍 getUserColor: Retrieved color ${color} for user ${username}`);
+  return color;
 };
 
 /**
@@ -181,16 +215,18 @@ export const getUserColor = (username: string): string => {
  * @param color - The color hex code
  */
 export const setUserColor = (username: string, color: string): void => {
-  if (typeof window === 'undefined') return;
-
-  try {
-    const userColors = JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
-    userColors[username] = color;
-    localStorage.setItem('syncCounterUserColors', JSON.stringify(userColors));
-    console.log(`💾 setUserColor: Saved color ${color} for user ${username}`);
-  } catch (error) {
-    console.error('Failed to save user color:', error);
+  if (typeof window === 'undefined') {
+    userColorCache = {
+      ...(userColorCache ?? {}),
+      [username]: color,
+    };
+    return;
   }
+
+  const userColors = ensureUserColorCache();
+  userColors[username] = color;
+  persistUserColors(userColors);
+  console.log(`💾 setUserColor: Saved color ${color} for user ${username}`);
 };
 
 /**
@@ -198,13 +234,8 @@ export const setUserColor = (username: string, color: string): void => {
  * @returns Object mapping usernames to their colors
  */
 export const getAllUserColors = (): Record<string, string> => {
-  if (typeof window === 'undefined') return {};
-
-  try {
-    return JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
-  } catch {
-    return {};
-  }
+  const cache = ensureUserColorCache();
+  return { ...cache };
 };
 
 /**
@@ -212,15 +243,9 @@ export const getAllUserColors = (): Record<string, string> => {
  * @param username - The username to remove color for
  */
 export const removeUserColor = (username: string): void => {
-  if (typeof window === 'undefined') return;
-
-  try {
-    const userColors = JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
-    delete userColors[username];
-    localStorage.setItem('syncCounterUserColors', JSON.stringify(userColors));
-  } catch (error) {
-    console.error('Failed to remove user color:', error);
-  }
+  const userColors = ensureUserColorCache();
+  delete userColors[username];
+  persistUserColors(userColors);
 };
 
 /**
@@ -234,6 +259,8 @@ export const clearAllUserColors = (): void => {
   } catch (error) {
     console.error('Failed to clear user colors:', error);
   }
+
+  userColorCache = {};
 };
 
 /**
