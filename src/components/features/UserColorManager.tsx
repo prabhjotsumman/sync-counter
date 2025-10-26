@@ -24,39 +24,56 @@ export const UserColorManager: React.FC<UserColorManagerProps> = ({
   const [userColors, setUserColors] = useState<Record<string, string>>({});
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [error, setError] = useState<string>('');
+  const [, forceUpdate] = useState({});
 
-  // Load user colors and set initial selected color
+  // Initial setup - load all colors even if currentUser is not yet available
   useEffect(() => {
     const allColors = getAllUserColors();
     setUserColors(allColors);
+    console.log(`🎨 UserColorManager: Initial setup with ${Object.keys(allColors).length} user colors`);
+  }, []);
 
-    // Set current user's color
-    const currentUserColor = getUserColor(currentUser);
-    setSelectedColor(currentUserColor);
+  // Load current user's color when currentUser becomes available
+  useEffect(() => {
+    if (currentUser) {
+      const currentUserColor = getUserColor(currentUser);
+      console.log(`🎨 UserColorManager: Loading color ${currentUserColor} for newly available user ${currentUser}`);
+      setSelectedColor(currentUserColor);
 
-    // Update available colors (exclude already assigned ones)
-    const assignedColors = Object.values(allColors);
-    setAvailableColors(USER_COLOR_OPTIONS.filter(color => !assignedColors.includes(color) || color === currentUserColor));
+      // Also refresh user colors and available colors
+      const allColors = getAllUserColors();
+      setUserColors(allColors);
+      const assignedColors = Object.values(allColors);
+      setAvailableColors(USER_COLOR_OPTIONS.filter(color => !assignedColors.includes(color) || allColors[currentUser] === color));
+    }
   }, [currentUser]);
 
   // Listen for color update events
   useEffect(() => {
     const handleColorUpdate = () => {
+      console.log(`🎨 UserColorManager: Received color update event`);
       const allColors = getAllUserColors();
       setUserColors(allColors);
 
       // Set current user's color
-      const currentUserColor = getUserColor(currentUser);
-      setSelectedColor(currentUserColor);
+      if (currentUser) {
+        const currentUserColor = getUserColor(currentUser);
+        console.log(`🎨 UserColorManager: Setting color to ${currentUserColor} for user ${currentUser}`);
+        setSelectedColor(currentUserColor);
+      }
 
       // Update available colors (exclude already assigned ones)
       const assignedColors = Object.values(allColors);
-      setAvailableColors(USER_COLOR_OPTIONS.filter(color => !assignedColors.includes(color) || color === currentUserColor));
+      setAvailableColors(USER_COLOR_OPTIONS.filter(color => !assignedColors.includes(color) || (currentUser && allColors[currentUser] === color)));
     };
 
+    console.log(`🎨 UserColorManager: Setting up color update event listener for user ${currentUser}`);
     window.addEventListener('user-color-updated', handleColorUpdate);
-    return () => window.removeEventListener('user-color-updated', handleColorUpdate);
-  }, [currentUser]);
+    return () => {
+      console.log(`🎨 UserColorManager: Removing color update event listener for user ${currentUser}`);
+      window.removeEventListener('user-color-updated', handleColorUpdate);
+    };
+  }, [currentUser]); // Keep currentUser dependency but ensure it works correctly
 
   const handleColorSelect = async (color: string) => {
     if (currentUser && color !== selectedColor) {
@@ -65,20 +82,27 @@ export const UserColorManager: React.FC<UserColorManagerProps> = ({
       try {
         // Update the color for current user
         setUserColor(currentUser, color);
+
+        // Update local state immediately
         setSelectedColor(color);
 
-        // Refresh user colors
+        // Refresh user colors from localStorage (to ensure we have the latest)
         const allColors = getAllUserColors();
         setUserColors(allColors);
 
-        // Update available colors
+        // Update available colors (exclude already assigned ones)
         const assignedColors = Object.values(allColors);
-        setAvailableColors(USER_COLOR_OPTIONS.filter(c => !assignedColors.includes(c) || c === color));
+        const updatedAvailableColors = USER_COLOR_OPTIONS.filter(c => !assignedColors.includes(c) || c === color);
+        setAvailableColors(updatedAvailableColors);
 
+        // Notify parent component
         onColorChange?.(color);
 
-        // Dispatch event to notify other components
-        window.dispatchEvent(new CustomEvent('user-color-updated'));
+        // Dispatch event to notify other components (with small delay to ensure localStorage is updated)
+        setTimeout(() => {
+          console.log(`🎨 UserColorManager: Dispatching user-color-updated event for ${currentUser} with color ${color}`);
+          window.dispatchEvent(new CustomEvent('user-color-updated'));
+        }, 10);
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Failed to update color');
       }
@@ -92,7 +116,11 @@ export const UserColorManager: React.FC<UserColorManagerProps> = ({
       setAvailableColors(USER_COLOR_OPTIONS);
       setSelectedColor('#3B82F6'); // Reset to default
       onColorChange?.('#3B82F6');
-      window.dispatchEvent(new CustomEvent('user-color-updated'));
+
+      // Dispatch event with small delay to ensure localStorage is updated
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('user-color-updated'));
+      }, 10);
     } catch (error) {
       setError('Failed to reset colors');
     }
@@ -112,6 +140,7 @@ export const UserColorManager: React.FC<UserColorManagerProps> = ({
       <div className="text-center">
         <div className="text-sm text-gray-600 mb-2">Your Color</div>
         <div
+          key={`color-display-${selectedColor}`}
           className="w-12 h-12 rounded-full mx-auto border-2 border-gray-300 shadow-lg"
           style={{ backgroundColor: selectedColor }}
         />
@@ -128,10 +157,12 @@ export const UserColorManager: React.FC<UserColorManagerProps> = ({
       {/* Available Colors */}
       <div>
         <div className="text-sm text-gray-600 mb-3">Available Colors</div>
-        <div className="grid grid-cols-5 gap-2">
+        <div key={`color-grid-${selectedColor}`} className="grid grid-cols-5 gap-2">
           {USER_COLOR_OPTIONS.map((color) => {
             const isSelected = selectedColor === color;
-            const isAssignedToOther = userColors[currentUser] !== color && Object.values(userColors).includes(color);
+            const isAssignedToOther = Object.entries(userColors).some(([username, userColor]) =>
+              username !== currentUser && userColor === color
+            );
 
             return (
               <button
@@ -168,7 +199,7 @@ export const UserColorManager: React.FC<UserColorManagerProps> = ({
 
         if (usersWithSameColor.length > 1) {
           return (
-            <div className="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-600">
+            <div key={`shade-preview-${selectedColor}`} className="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-600">
               <div className="text-sm text-gray-400 mb-3">Progress Bar Preview (Multiple Users)</div>
               <div className="text-xs text-gray-500 mb-2">
                 When multiple users have the same color, the progress bar shows different shades:

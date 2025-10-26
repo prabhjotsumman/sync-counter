@@ -21,3 +21,4 @@ export { default as CounterValue } from './CounterValue';
 export { default as FullScreenCounterModal } from './FullScreenCounterModal';
 export { default as IncrementButton } from './IncrementButton';
 export { default as ProgressBar } from './ProgressBar';
+export { default as CounterCustomization } from './CounterCustomization';

@@ -20,7 +20,9 @@ export default function IncrementButton({ id }: { id: string }) {
     if (currentUser) {
       // For increment button, we only need to consider the current user
       // since it's a single-user action, but we'll use the same logic for consistency
-      setUserColor(getUserColor(currentUser));
+      const color = getUserColor(currentUser);
+      console.log(`🔄 IncrementButton: Updating color for ${currentUser} to ${color}`);
+      setUserColor(color);
     } else {
       setUserColor('#10B981');
     }
@@ -29,14 +31,21 @@ export default function IncrementButton({ id }: { id: string }) {
   // Listen for color update events
   useEffect(() => {
     const handleColorUpdate = () => {
+      console.log(`🎨 IncrementButton: Received color update event`);
       if (currentUser) {
-        setUserColor(getUserColor(currentUser));
+        const color = getUserColor(currentUser);
+        console.log(`🎨 IncrementButton: Setting color to ${color} for user ${currentUser}`);
+        setUserColor(color);
       }
     };
 
+    console.log(`🎨 IncrementButton: Setting up color update event listener for user ${currentUser}`);
     window.addEventListener('user-color-updated', handleColorUpdate);
-    return () => window.removeEventListener('user-color-updated', handleColorUpdate);
-  }, [currentUser]);
+    return () => {
+      console.log(`🎨 IncrementButton: Removing color update event listener for user ${currentUser}`);
+      window.removeEventListener('user-color-updated', handleColorUpdate);
+    };
+  }, []); // Remove currentUser dependency to prevent re-creation
 
   if (!counter) return null;
 

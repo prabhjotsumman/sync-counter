@@ -713,7 +713,13 @@ export function useCountersPageLogic() {
     // Expose triggerDailyReset for manual testing (development only)
     useEffect(() => {
         if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-            (window as any).triggerDailyReset = () => {
+            // Extend window interface for development functions
+            interface DevelopmentWindow extends Window {
+                triggerDailyReset?: () => void;
+                forceResetDailyCounts?: () => void;
+            }
+
+            (window as DevelopmentWindow).triggerDailyReset = () => {
                 console.log('🧪 Manual daily reset triggered for testing...');
                 console.log('📊 Current counters before reset:', counters.length, counters.map(c => ({ id: c.id, name: c.name, dailyCount: c.dailyCount })));
 
@@ -742,7 +748,7 @@ export function useCountersPageLogic() {
             };
 
             // Also expose a direct reset function
-            (window as any).forceResetDailyCounts = () => {
+            (window as DevelopmentWindow).forceResetDailyCounts = () => {
                 console.log('🧪 Force reset triggered - setting all dailyCounts to 0...');
                 setCounters(prev => {
                     const forceResetCounters = prev.map(counter => ({

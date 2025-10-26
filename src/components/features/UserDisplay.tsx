@@ -31,14 +31,21 @@ export default function UserDisplay({ currentUser, onUpdateUsername }: UserDispl
   // Listen for color update events
   useEffect(() => {
     const handleColorUpdate = () => {
+      console.log(`🎨 UserDisplay: Received color update event`);
       if (currentUser) {
-        setUserColor(getUserColor(currentUser));
+        const color = getUserColor(currentUser);
+        console.log(`🎨 UserDisplay: Setting color to ${color} for user ${currentUser}`);
+        setUserColor(color);
       }
     };
 
+    console.log(`🎨 UserDisplay: Setting up color update event listener for user ${currentUser}`);
     window.addEventListener('user-color-updated', handleColorUpdate);
-    return () => window.removeEventListener('user-color-updated', handleColorUpdate);
-  }, [currentUser]);
+    return () => {
+      console.log(`🎨 UserDisplay: Removing color update event listener for user ${currentUser}`);
+      window.removeEventListener('user-color-updated', handleColorUpdate);
+    };
+  }, []); // Remove currentUser dependency to prevent re-creation
 
   if (!currentUser) return null;
 

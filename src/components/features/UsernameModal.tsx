@@ -36,8 +36,12 @@ export default function UsernameModal({ show, value, onChange, onSubmit, onCance
       const finalUsername = value.trim();
       setUserColor(finalUsername, selectedColor);
 
-      // Dispatch custom event to notify other components of color change
-      window.dispatchEvent(new CustomEvent('user-color-updated'));
+      console.log(`🎨 UsernameModal: Submitting username ${finalUsername} with color ${selectedColor}`);
+
+      // Dispatch custom event to notify other components of color change (with delay)
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('user-color-updated'));
+      }, 10);
       onSubmit(finalUsername, selectedColor);
     }
   }, [value, selectedColor, onSubmit]);
@@ -50,11 +54,15 @@ export default function UsernameModal({ show, value, onChange, onSubmit, onCance
 
   // Handle color selection
   const handleColorSelect = useCallback((color: string) => {
+    console.log(`🎨 UsernameModal: Selected color ${color} for user ${currentUser}`);
     setSelectedColor(color);
     // Store color immediately for current user
     if (currentUser) {
       setUserColor(currentUser, color);
-      window.dispatchEvent(new CustomEvent('user-color-updated'));
+      // Small delay to ensure localStorage is updated
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('user-color-updated'));
+      }, 10);
     }
   }, [currentUser]);
 

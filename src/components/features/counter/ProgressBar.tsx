@@ -62,12 +62,17 @@ export default function ProgressBar({ counterName, value, max, showProgressText 
   // Listen for color update events to force re-render
   useEffect(() => {
     const handleColorUpdate = () => {
+      console.log(`🎨 ProgressBar: Received color update event`);
       forceUpdate({});
     };
 
+    console.log(`🎨 ProgressBar: Setting up color update event listener`);
     window.addEventListener('user-color-updated', handleColorUpdate);
-    return () => window.removeEventListener('user-color-updated', handleColorUpdate);
-  }, []);
+    return () => {
+      console.log(`🎨 ProgressBar: Removing color update event listener`);
+      window.removeEventListener('user-color-updated', handleColorUpdate);
+    };
+  }, []); // Remove dependencies to prevent re-creation
 
   const todayHistory = history?.[today];
 

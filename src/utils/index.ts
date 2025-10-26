@@ -167,7 +167,9 @@ export const getUserColor = (username: string): string => {
 
   try {
     const userColors = JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
-    return userColors[username] || '#3B82F6';
+    const color = userColors[username] || '#3B82F6';
+    console.log(`🔍 getUserColor: Retrieved color ${color} for user ${username}`);
+    return color;
   } catch {
     return '#3B82F6';
   }
@@ -185,6 +187,7 @@ export const setUserColor = (username: string, color: string): void => {
     const userColors = JSON.parse(localStorage.getItem('syncCounterUserColors') || '{}');
     userColors[username] = color;
     localStorage.setItem('syncCounterUserColors', JSON.stringify(userColors));
+    console.log(`💾 setUserColor: Saved color ${color} for user ${username}`);
   } catch (error) {
     console.error('Failed to save user color:', error);
   }
