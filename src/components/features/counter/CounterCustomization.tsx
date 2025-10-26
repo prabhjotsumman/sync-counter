@@ -126,7 +126,8 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     console.log('📁 File input triggered');
-    const file = event.target.files?.[0];
+    const inputEl = event.target;
+    const file = inputEl.files?.[0];
     if (file && file.type.startsWith('image/')) {
       console.log('🖼️ Valid image file selected:', file.name);
       try {
@@ -166,6 +167,9 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     } else {
       console.log('❌ No valid image file selected');
     }
+
+    // Reset input value so selecting the same file again still triggers change
+    inputEl.value = '';
   };
 
   const handleRemoveImage = () => {
@@ -176,6 +180,10 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     delete savedImages[counter.id];
     delete savedImages[`${counter.id}_fallback`];
     safeSetItem('counterCustomImages', savedImages);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleTextChange = (newText: string) => {

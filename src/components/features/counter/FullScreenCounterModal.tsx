@@ -210,6 +210,15 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
   const show = open && !!counter;
   if (!show || !counter) return null;
 
+  const baseCounter = counter as ExtendedCounter;
+  const counterWithLocalCustomizations: ExtendedCounter = {
+    ...baseCounter,
+    customImage: customImage ?? baseCounter.customImage,
+    customText: customText || baseCounter.customText,
+    customTextSize: customTextSize || baseCounter.customTextSize,
+    customTextColor: customTextColor || baseCounter.customTextColor,
+  };
+
   const onClick = () => {
     console.log('🖱️ Modal onClick triggered - incrementing counter');
     handleIncrement();
@@ -411,7 +420,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
       >
         {/* Customization buttons */}
         <CounterCustomization
-          counter={counter}
+          counter={counterWithLocalCustomizations}
           onUpdate={handleCustomizationUpdate}
           className="relative"
         />
