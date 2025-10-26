@@ -2,13 +2,13 @@
   {
     "id": "counter-1761435507469",
     "name": "Param",
-    "value": 159,
-    "lastUpdated": 1761507775873,
-    "dailyGoal": 170,
+    "value": 201,
+    "lastUpdated": 1761514072995,
+    "dailyGoal": 220,
     "users": {
       "Param": 5,
       "Joe": 71,
-      "Prabh": 179
+      "Prabh": 221
     },
     "history": {
       "2025-10-25": {
@@ -20,13 +20,13 @@
       },
       "2025-10-26": {
         "users": {
-          "Prabh": 159
+          "Prabh": 201
         },
-        "total": 159,
+        "total": 201,
         "day": "Sunday"
       }
     },
-    "dailyCount": 159
+    "dailyCount": 201
   },
   {
     "id": "counter-1761435517755",
@@ -59,5 +59,25 @@
       }
     },
     "dailyCount": 10
+  },
+  {
+    "id": "counter-1761511294530",
+    "name": "BigCounter",
+    "value": 155519,
+    "lastUpdated": 1761511353797,
+    "dailyGoal": 500,
+    "users": {
+      "Prabh": 19
+    },
+    "history": {
+      "2025-10-26": {
+        "users": {
+          "Prabh": 19
+        },
+        "total": 19,
+        "day": "Sunday"
+      }
+    },
+    "dailyCount": 19
   }
 ]

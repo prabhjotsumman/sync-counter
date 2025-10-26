@@ -1,9 +1,8 @@
 'use client';
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import ProgressBar from './ProgressBar';
 import CounterCustomization from './CounterCustomization';
-import { ImageIcon, TextIcon } from '@/components/ui/CounterIcons';
 import { useCounterContext } from '@/providers/CounterContext';
 import { useCounterLogic } from '@/hooks/useCounterLogic';
 import type { Counter } from '@/types';
@@ -20,9 +19,34 @@ interface FullScreenCounterModalProps {
 interface ExtendedCounter extends Counter {
   customImage?: string;
   customText?: string;
-  customTextSize?: 'sm' | 'md' | 'lg' | 'xl';
-  customTextColor?: 'white' | 'golden' | 'yellow' | 'orange';
+  customTextSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+  customTextColor?: 'white' | 'golden' | 'yellow' | 'orange' | 'pink' | 'sky' | 'emerald';
+  customTextWeight?: 'regular' | 'bold';
+  customTextGlow?: boolean;
 }
+
+type CustomTextSize = NonNullable<ExtendedCounter['customTextSize']>;
+type CustomTextColor = NonNullable<ExtendedCounter['customTextColor']>;
+type CustomTextWeight = NonNullable<ExtendedCounter['customTextWeight']>;
+
+const SIZE_CLASS_MAP: Record<CustomTextSize, string> = {
+  xs: 'text-base md:text-2xl',
+  sm: 'text-lg md:text-3xl',
+  md: 'text-2xl md:text-4xl',
+  lg: 'text-3xl md:text-5xl',
+  xl: 'text-4xl md:text-6xl',
+  xxl: 'text-5xl md:text-7xl'
+};
+
+const TEXT_COLOR_HEX: Record<CustomTextColor, string> = {
+  white: '#FFFFFF',
+  golden: '#FBBF24',
+  yellow: '#FEF08A',
+  orange: '#FB923C',
+  pink: '#F472B6',
+  sky: '#38BDF8',
+  emerald: '#34D399'
+};
 
 export default function FullScreenCounterModal({ id, open, setOpen }: FullScreenCounterModalProps) {
   const { counters, handleCounterUpdate } = useCounterContext();
@@ -31,8 +55,61 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
   // Load saved customizations from localStorage
   const [customImage, setCustomImage] = useState<string | null>(null);
   const [customText, setCustomText] = useState<string>('');
-  const [customTextSize, setCustomTextSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('md');
-  const [customTextColor, setCustomTextColor] = useState<'white' | 'golden' | 'yellow' | 'orange'>('white');
+  const [customTextSize, setCustomTextSize] = useState<CustomTextSize>('md');
+  const [customTextColor, setCustomTextColor] = useState<CustomTextColor>('white');
+  const [customTextWeight, setCustomTextWeight] = useState<CustomTextWeight>('regular');
+  const [customTextGlow, setCustomTextGlow] = useState<boolean>(false);
+  const [customizationOpen, setCustomizationOpen] = useState(false);
+  const fullscreenRequestedRef = useRef(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const hideControlsTimeoutRef = useRef<number | null>(null);
+
+  const textDisplayClass = useMemo(() => {
+    const baseClass = SIZE_CLASS_MAP[customTextSize] ?? SIZE_CLASS_MAP.md;
+
+    if (!customText) {
+      return baseClass;
+    }
+
+    const length = customText.length;
+    if (length > 450) return `${baseClass} leading-snug`;
+    if (length > 280) return `${baseClass} leading-normal`;
+    return `${baseClass} leading-relaxed`;
+  }, [customText, customTextSize]);
+
+  const textStyle = useMemo(() => ({
+    color: TEXT_COLOR_HEX[customTextColor] ?? '#FFFFFF',
+    fontWeight: customTextWeight === 'bold' ? 700 : 400,
+    textShadow: customTextGlow
+      ? '0 0 14px rgba(255,255,255,0.65), 0 0 36px rgba(255,255,255,0.35)'
+      : 'none'
+  }), [customTextColor, customTextWeight, customTextGlow]);
+
+  const clearHideControlsTimeout = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (hideControlsTimeoutRef.current !== null) {
+      window.clearTimeout(hideControlsTimeoutRef.current);
+      hideControlsTimeoutRef.current = null;
+    }
+  }, []);
+
+  const scheduleHideControls = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    clearHideControlsTimeout();
+    if (customizationOpen) return;
+    hideControlsTimeoutRef.current = window.setTimeout(() => {
+      setControlsVisible(false);
+    }, 3000);
+  }, [clearHideControlsTimeout, customizationOpen]);
+
+  const handleUserInteraction = useCallback(() => {
+    setControlsVisible(true);
+    if (customizationOpen) {
+      clearHideControlsTimeout();
+      return;
+    }
+    scheduleHideControls();
+  }, [scheduleHideControls, clearHideControlsTimeout, customizationOpen]);
 
   const handleCustomizationUpdate = (updates: Partial<ExtendedCounter>) => {
     const updatedCounter = { ...counter, ...updates } as ExtendedCounter;
@@ -58,6 +135,12 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     }
     if (updates.customTextColor !== undefined) {
       setCustomTextColor(updates.customTextColor || 'white');
+    }
+    if (updates.customTextWeight !== undefined) {
+      setCustomTextWeight(updates.customTextWeight || 'regular');
+    }
+    if (updates.customTextGlow !== undefined) {
+      setCustomTextGlow(!!updates.customTextGlow);
     }
   };
 
@@ -160,6 +243,75 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     };
   }, [isDragging, updateSeparatorPosition]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const attemptFullscreen = async () => {
+      if (!open) return;
+      const docEl = document.documentElement as HTMLElement;
+      if (document.fullscreenElement || fullscreenRequestedRef.current) return;
+      const webkitRequest = (docEl as typeof docEl & {
+        webkitRequestFullscreen?: () => Promise<void>;
+        webkitRequestFullScreen?: () => Promise<void>;
+      }).webkitRequestFullscreen || (docEl as typeof docEl & { webkitRequestFullScreen?: () => Promise<void> }).webkitRequestFullScreen;
+      const mozRequest = (docEl as typeof docEl & { mozRequestFullScreen?: () => Promise<void> }).mozRequestFullScreen;
+      const msRequest = (docEl as typeof docEl & { msRequestFullscreen?: () => Promise<void> }).msRequestFullscreen;
+
+      const request = docEl.requestFullscreen?.bind(docEl) || webkitRequest?.bind(docEl) || mozRequest?.bind(docEl) || msRequest?.bind(docEl);
+
+      if (!request) return;
+
+      try {
+        await request();
+        fullscreenRequestedRef.current = true;
+      } catch (error) {
+        console.debug('Fullscreen request failed:', error);
+      }
+    };
+
+    attemptFullscreen();
+
+    return () => {
+      if (!open && fullscreenRequestedRef.current && document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => undefined);
+        fullscreenRequestedRef.current = false;
+      }
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (customizationOpen) {
+      setControlsVisible(true);
+      clearHideControlsTimeout();
+    } else {
+      handleUserInteraction();
+    }
+  }, [customizationOpen, clearHideControlsTimeout, handleUserInteraction]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!open) {
+      clearHideControlsTimeout();
+      setControlsVisible(true);
+      return;
+    }
+
+    handleUserInteraction();
+
+    const events: (keyof WindowEventMap)[] = ['mousemove', 'mousedown', 'touchstart', 'touchmove', 'keydown'];
+
+    for (const event of events) {
+      window.addEventListener(event, handleUserInteraction, { passive: true });
+    }
+
+    return () => {
+      clearHideControlsTimeout();
+      for (const event of events) {
+        window.removeEventListener(event, handleUserInteraction);
+      }
+    };
+  }, [open, handleUserInteraction, clearHideControlsTimeout]);
+
   // Bubble state (unconditional hook usage to keep hook order stable)
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const bubbleId = useRef(0);
@@ -211,6 +363,16 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     const savedTextColors = safeGetItem('counterCustomTextColors');
     const savedTextColor = savedTextColors[counter.id];
     setCustomTextColor(savedTextColor || extendedCounter.customTextColor || 'white');
+
+    // Load saved text weight
+    const savedTextWeights = safeGetItem('counterCustomTextWeights');
+    const savedWeight = savedTextWeights[counter.id];
+    setCustomTextWeight(savedWeight || extendedCounter.customTextWeight || 'regular');
+
+    // Load saved text glow
+    const savedGlow = safeGetItem('counterCustomTextGlow');
+    const savedGlowValue = savedGlow[counter.id];
+    setCustomTextGlow(savedGlowValue ?? extendedCounter.customTextGlow ?? false);
   }, [counter, id, handleCounterUpdate]);
 
   const show = open && !!counter;
@@ -223,6 +385,8 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     customText: customText || baseCounter.customText,
     customTextSize: customTextSize || baseCounter.customTextSize,
     customTextColor: customTextColor || baseCounter.customTextColor,
+    customTextWeight: customTextWeight || baseCounter.customTextWeight,
+    customTextGlow: typeof customTextGlow === 'boolean' ? customTextGlow : baseCounter.customTextGlow,
   };
 
   const onClick = () => {
@@ -249,11 +413,11 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
         {/* Custom content above value - Flexible layout */}
         {(customImage || customText) && (
           <div
-            className="flex flex-col w-full max-w-6xl px-4 mb-8 md:mb-12"
+            className="flex flex-col w-full max-w-6xl px-4 mb-6 md:mb-10"
             data-separator-container
             style={{
-              height: customImage && customText ? 'calc(100vh - 8rem)' : 'calc(100vh - 12rem)',
-              maxHeight: customImage && customText ? '75vh' : '65vh'
+              height: customImage && customText ? 'calc(100vh - 6rem)' : 'calc(100vh - 9rem)',
+              maxHeight: customImage && customText ? '80vh' : '72vh'
             }}
           >
             {customImage && customText ? (
@@ -273,7 +437,11 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
                       className="object-contain rounded-lg shadow-2xl"
                     />
                     {/* Remove button for full screen image */}
-                    <div className="absolute top-2 right-2 md:top-4 md:right-4">
+                    <div
+                      className={`absolute top-2 right-2 md:top-4 md:right-4 transition-opacity duration-300 ${
+                        controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                      }`}
+                    >
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -316,19 +484,11 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
                   style={{ height: `${100 - separatorPosition}%` }}
                 >
                   <div className="w-full max-w-full h-full flex items-center justify-center">
-                    <div className="max-h-full overflow-y-auto px-2 py-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                    <div className="max-h-full overflow-y-auto px-3 py-3 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
                       <p
-                        className={`text-center font-semibold drop-shadow-lg leading-relaxed ${
-                          customTextSize === 'sm' ? 'text-base md:text-xl' :
-                          customTextSize === 'md' ? 'text-lg md:text-3xl' :
-                          customTextSize === 'lg' ? 'text-xl md:text-4xl' :
-                          'text-2xl md:text-5xl'
-                        }`}
+                        className={`text-center drop-shadow-lg leading-relaxed whitespace-pre-wrap break-words ${textDisplayClass}`}
                         style={{
-                          color: customTextColor === 'white' ? '#FFFFFF' :
-                                 customTextColor === 'golden' ? '#FBBF24' :
-                                 customTextColor === 'yellow' ? '#FEF08A' :
-                                 '#FB923C'
+                          ...textStyle
                         }}
                       >
                         {customText}
@@ -343,7 +503,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
                 {customImage && (
                   <div
                     className="relative w-full"
-                    style={{ width: 'min(85vw, 48rem)', height: 'min(60vh, 32rem)' }}
+                    style={{ width: 'min(88vw, 52rem)', height: 'min(68vh, 36rem)' }}
                   >
                     <Image
                       src={customImage}
@@ -353,7 +513,11 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
                       className="object-contain rounded-lg shadow-2xl"
                     />
                     {/* Remove button for full screen image */}
-                    <div className="absolute top-2 right-2 md:top-4 md:right-4">
+                    <div
+                      className={`absolute top-2 right-2 md:top-4 md:right-4 transition-opacity duration-300 ${
+                        controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                      }`}
+                    >
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -373,20 +537,10 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
                 )}
 
                 {customText && (
-                  <div className="max-h-[60vh] overflow-y-auto px-2 py-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                  <div className="max-h-[68vh] overflow-y-auto px-3 py-3 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
                     <p
-                      className={`text-center font-semibold drop-shadow-lg max-w-[80vw] md:max-w-2xl break-words leading-relaxed ${
-                        customTextSize === 'sm' ? 'text-base md:text-xl' :
-                        customTextSize === 'md' ? 'text-lg md:text-3xl' :
-                        customTextSize === 'lg' ? 'text-xl md:text-4xl' :
-                        'text-2xl md:text-5xl'
-                      }`}
-                      style={{
-                        color: customTextColor === 'white' ? '#FFFFFF' :
-                               customTextColor === 'golden' ? '#FBBF24' :
-                               customTextColor === 'yellow' ? '#FEF08A' :
-                               '#FB923C'
-                      }}
+                      className={`text-center drop-shadow-lg max-w-[82vw] md:max-w-3xl break-words leading-relaxed whitespace-pre-wrap ${textDisplayClass}`}
+                      style={textStyle}
                     >
                       {customText}
                     </p>
@@ -416,7 +570,9 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
 
       {/* All buttons in single column - bottom right */}
       <div
-        className="fixed bottom-6 md:bottom-8 right-6 md:right-8 flex flex-col gap-2 md:gap-3 z-[60] pointer-events-auto"
+        className={`fixed bottom-6 md:bottom-8 right-6 md:right-8 flex flex-col gap-2 md:gap-3 z-[60] pointer-events-auto transition-opacity duration-300 ${
+          controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
         onMouseUp={(e) => e.stopPropagation()}
@@ -429,21 +585,24 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
           counter={counterWithLocalCustomizations}
           onUpdate={handleCustomizationUpdate}
           className="relative"
+          onModalOpenChange={setCustomizationOpen}
         />
 
         {/* Close button */}
-        <button
-          className="bg-gray-900 hover:bg-gray-700 text-white rounded-full shadow-lg w-12 h-12 md:w-14 md:h-14 flex items-center justify-center text-2xl md:text-3xl border border-gray-700 transition-colors pointer-events-auto"
-          style={{ zIndex: 100, touchAction: 'manipulation' }}
-          onClick={e => { e.stopPropagation(); setOpen(undefined); }}
-          onMouseDown={(e) => e.stopPropagation()}
-          onMouseUp={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          onTouchEnd={(e) => e.stopPropagation()}
-          aria-label="Close Fullscreen"
-        >
-          &times;
-        </button>
+        {!customizationOpen && (
+          <button
+            className="bg-gray-900 hover:bg-gray-700 text-white rounded-full shadow-lg w-12 h-12 md:w-14 md:h-14 flex items-center justify-center text-2xl md:text-3xl border border-gray-700 transition-colors pointer-events-auto"
+            style={{ zIndex: 100, touchAction: 'manipulation' }}
+            onClick={e => { e.stopPropagation(); setOpen(undefined); }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+            aria-label="Close Fullscreen"
+          >
+            &times;
+          </button>
+        )}
       </div>
     </div>
   );

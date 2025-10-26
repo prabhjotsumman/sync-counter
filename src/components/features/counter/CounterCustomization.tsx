@@ -8,29 +8,61 @@ import type { Counter } from '@/types';
 interface ExtendedCounter extends Counter {
   customImage?: string;
   customText?: string;
-  customTextSize?: 'sm' | 'md' | 'lg' | 'xl';
-  customTextColor?: 'white' | 'golden' | 'yellow' | 'orange';
+  customTextSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+  customTextColor?: 'white' | 'golden' | 'yellow' | 'orange' | 'pink' | 'sky' | 'emerald';
+  customTextWeight?: 'regular' | 'bold';
+  customTextGlow?: boolean;
 }
+
+type CustomTextSize = NonNullable<ExtendedCounter['customTextSize']>;
+type CustomTextColor = NonNullable<ExtendedCounter['customTextColor']>;
 
 interface CounterCustomizationProps {
   counter: Counter;
   onUpdate: (updates: Partial<ExtendedCounter>) => void;
   className?: string;
+  onModalOpenChange?: (open: boolean) => void;
 }
 
 const MAX_IMAGE_DIMENSION = 1600;
 
-const TEXT_SIZE_OPTIONS: readonly { size: 'sm' | 'md' | 'lg' | 'xl'; label: string; iconWidth: number }[] = [
-  { size: 'sm', label: 'Small (A-)', iconWidth: 16 },
-  { size: 'md', label: 'Medium', iconWidth: 20 },
-  { size: 'lg', label: 'Large (A+)', iconWidth: 24 },
-  { size: 'xl', label: 'Extra Large (A++)', iconWidth: 28 }
+const TEXT_SIZE_OPTIONS: readonly {
+  size: CustomTextSize;
+  label: string;
+  previewClass: string;
+}[] = [
+  { size: 'xs', label: 'Extra Small', previewClass: 'text-xs md:text-sm' },
+  { size: 'sm', label: 'Small', previewClass: 'text-sm md:text-base' },
+  { size: 'md', label: 'Medium', previewClass: 'text-base md:text-lg' },
+  { size: 'lg', label: 'Large', previewClass: 'text-lg md:text-xl' },
+  { size: 'xl', label: 'Extra Large', previewClass: 'text-xl md:text-2xl' },
+  { size: 'xxl', label: 'Display', previewClass: 'text-2xl md:text-3xl' }
 ] as const;
+
+const TEXT_COLOR_OPTIONS: readonly {
+  key: CustomTextColor;
+  label: string;
+  color: string;
+}[] = [
+  { key: 'white', label: 'White', color: '#FFFFFF' },
+  { key: 'golden', label: 'Golden', color: '#FBBF24' },
+  { key: 'yellow', label: 'Yellow', color: '#FEF08A' },
+  { key: 'orange', label: 'Orange', color: '#FB923C' },
+  { key: 'pink', label: 'Rose', color: '#F472B6' },
+  { key: 'sky', label: 'Sky', color: '#38BDF8' },
+  { key: 'emerald', label: 'Emerald', color: '#34D399' }
+] as const;
+
+const TEXT_COLOR_HEX = TEXT_COLOR_OPTIONS.reduce<Record<CustomTextColor, string>>((acc, option) => {
+  acc[option.key] = option.color;
+  return acc;
+}, {} as Record<CustomTextColor, string>);
 
 const CounterCustomization: React.FC<CounterCustomizationProps> = ({
   counter,
   onUpdate,
-  className = ''
+  className = '',
+  onModalOpenChange
 }) => {
   const [showCustomization, setShowCustomization] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(() => {
@@ -38,10 +70,21 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     return extendedCounter.customImage || null;
   });
   const [textValue, setTextValue] = useState((counter as ExtendedCounter).customText || '');
-  const [textSize, setTextSize] = useState<'sm' | 'md' | 'lg' | 'xl'>((counter as ExtendedCounter).customTextSize || 'md');
-  const [textColor, setTextColor] = useState<'white' | 'golden' | 'yellow' | 'orange'>((counter as ExtendedCounter).customTextColor || 'white');
+  const [textSize, setTextSize] = useState<CustomTextSize>((counter as ExtendedCounter).customTextSize || 'md');
+  const [textColor, setTextColor] = useState<CustomTextColor>((counter as ExtendedCounter).customTextColor || 'white');
+  const [textWeight, setTextWeight] = useState<'regular' | 'bold'>((counter as ExtendedCounter).customTextWeight || 'regular');
+  const [textGlow, setTextGlow] = useState<boolean>((counter as ExtendedCounter).customTextGlow ?? false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    onModalOpenChange?.(showCustomization);
+    return () => {
+      if (showCustomization) {
+        onModalOpenChange?.(false);
+      }
+    };
+  }, [showCustomization, onModalOpenChange]);
 
   useEffect(() => {
     if (!showCustomization) return;
@@ -61,6 +104,8 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     setTextValue(extendedCounter.customText || '');
     setTextSize(extendedCounter.customTextSize || 'md');
     setTextColor(extendedCounter.customTextColor || 'white');
+    setTextWeight(extendedCounter.customTextWeight || 'regular');
+    setTextGlow(extendedCounter.customTextGlow ?? false);
     setImagePreview(extendedCounter.customImage || null);
   }, [counter]);
 
@@ -191,7 +236,9 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     onUpdate({
       customText: newText,
       customTextSize: textSize,
-      customTextColor: textColor
+      customTextColor: textColor,
+      customTextWeight: textWeight,
+      customTextGlow: textGlow
     } as Partial<ExtendedCounter>);
 
     const savedTexts = safeGetItem('counterCustomTexts');
@@ -205,14 +252,24 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     const savedTextColors = safeGetItem('counterCustomTextColors');
     savedTextColors[counter.id] = textColor;
     safeSetItem('counterCustomTextColors', savedTextColors);
+
+    const savedTextWeights = safeGetItem('counterCustomTextWeights');
+    savedTextWeights[counter.id] = textWeight;
+    safeSetItem('counterCustomTextWeights', savedTextWeights);
+
+    const savedTextGlow = safeGetItem('counterCustomTextGlow');
+    savedTextGlow[counter.id] = textGlow;
+    safeSetItem('counterCustomTextGlow', savedTextGlow);
   };
 
-  const handleTextSizeChange = (newSize: 'sm' | 'md' | 'lg' | 'xl') => {
+  const handleTextSizeChange = (newSize: CustomTextSize) => {
     setTextSize(newSize);
     onUpdate({
       customText: textValue,
       customTextSize: newSize,
-      customTextColor: textColor
+      customTextColor: textColor,
+      customTextWeight: textWeight,
+      customTextGlow: textGlow
     } as Partial<ExtendedCounter>);
 
     const savedTextSizes = safeGetItem('counterCustomTextSizes');
@@ -220,12 +277,14 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     safeSetItem('counterCustomTextSizes', savedTextSizes);
   };
 
-  const handleTextColorChange = (newColor: 'white' | 'golden' | 'yellow' | 'orange') => {
+  const handleTextColorChange = (newColor: CustomTextColor) => {
     setTextColor(newColor);
     onUpdate({
       customText: textValue,
       customTextSize: textSize,
-      customTextColor: newColor
+      customTextColor: newColor,
+      customTextWeight: textWeight,
+      customTextGlow: textGlow
     } as Partial<ExtendedCounter>);
 
     const savedTextColors = safeGetItem('counterCustomTextColors');
@@ -235,10 +294,15 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
 
   const handleClearText = () => {
     setTextValue('');
+    setTextSize('md');
+    setTextWeight('regular');
+    setTextGlow(false);
     onUpdate({
       customText: undefined,
       customTextSize: 'md',
-      customTextColor: 'white'
+      customTextColor: 'white',
+      customTextWeight: 'regular',
+      customTextGlow: false
     } as Partial<ExtendedCounter>);
 
     const savedTexts = safeGetItem('counterCustomTexts');
@@ -252,6 +316,14 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     const savedTextColors = safeGetItem('counterCustomTextColors');
     delete savedTextColors[counter.id];
     safeSetItem('counterCustomTextColors', savedTextColors);
+
+    const savedTextWeights = safeGetItem('counterCustomTextWeights');
+    delete savedTextWeights[counter.id];
+    safeSetItem('counterCustomTextWeights', savedTextWeights);
+
+    const savedTextGlow = safeGetItem('counterCustomTextGlow');
+    delete savedTextGlow[counter.id];
+    safeSetItem('counterCustomTextGlow', savedTextGlow);
   };
 
   const safeGetItem = (key: string) => {
@@ -323,7 +395,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
 
       {showCustomization && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-[60]"
+          className="fixed inset-0 bg-black/65 backdrop-blur-sm z-[55]"
           onClick={(e) => {
             e.stopPropagation();
             setShowCustomization(false);
@@ -344,71 +416,153 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between mb-4 md:mb-6">
-            <h3 className="text-lg md:text-xl font-semibold text-white">Customize Text</h3>
+          <div className="relative mb-4 md:mb-6">
+            <h3 className="text-lg md:text-xl font-semibold text-white text-center">Customize Text</h3>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setShowCustomization(false);
               }}
-              className="text-gray-400 hover:text-white transition-colors p-1"
+              className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-200 hover:text-white transition-all p-1.5 rounded-full border border-gray-400/60 bg-gray-700/70 hover:bg-gray-600/90 shadow-[0_10px_25px_rgba(0,0,0,0.35)]"
               title="Close"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
             </button>
           </div>
 
           <div className="space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="text-sm font-medium text-gray-200">Text Size</span>
-              <div className="flex items-center gap-2">
-                {TEXT_SIZE_OPTIONS.map(({ size, label, iconWidth }) => (
-                  <button
-                    key={size}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleTextSizeChange(size);
-                    }}
-                    className={`p-2 rounded border transition-colors ${
-                      textSize === size
-                        ? 'bg-blue-600 border-blue-500 text-white'
-                        : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
-                    }`}
-                    title={label}
-                  >
-                    <svg width={iconWidth} height={iconWidth} viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M6 9h12v6H6V9zm0 8h12v2H6v-2z" />
-                    </svg>
-                  </button>
-                ))}
-              </div>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {TEXT_SIZE_OPTIONS.map(({ size, label, previewClass }) => (
+                <button
+                  key={size}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleTextSizeChange(size);
+                  }}
+                  className={`p-2 rounded-xl border transition-colors flex items-center justify-center w-11 h-11 md:w-12 md:h-12 ${
+                    textSize === size
+                      ? 'bg-blue-600 border-blue-500 text-white shadow-inner'
+                      : 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600'
+                  }`}
+                  title={label}
+                  aria-label={`Set text size to ${label}`}
+                >
+                  <span className={`font-semibold leading-none ${previewClass}`}>A</span>
+                </button>
+              ))}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="text-sm font-medium text-gray-200">Text Color</span>
-              <div className="flex items-center gap-2">
-                {[
-                  { key: 'white', color: '#FFFFFF', label: 'White' },
-                  { key: 'golden', color: '#FBBF24', label: 'Golden' },
-                  { key: 'yellow', color: '#FEF08A', label: 'Yellow' },
-                  { key: 'orange', color: '#FB923C', label: 'Orange' }
-                ].map(({ key, color, label }) => (
-                  <button
-                    key={key}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleTextColorChange(key as any);
-                    }}
-                    className={`w-8 h-8 rounded-full border-2 transition-all ${
-                      textColor === key ? 'border-white scale-110' : 'border-gray-500'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    title={label}
-                  />
-                ))}
-              </div>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {TEXT_COLOR_OPTIONS.map(({ key, color, label }) => (
+                <button
+                  key={key}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleTextColorChange(key);
+                  }}
+                  className={`w-9 h-9 rounded-full border-2 transition-all ${
+                    textColor === key ? 'border-white scale-110 shadow-sm' : 'border-gray-500'
+                  }`}
+                  style={{ backgroundColor: color }}
+                  title={label}
+                  aria-label={`Set text color ${label}`}
+                />
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const next = textWeight === 'bold' ? 'regular' : 'bold';
+                  setTextWeight(next);
+                  onUpdate({
+                    customText: textValue,
+                    customTextSize: textSize,
+                    customTextColor: textColor,
+                    customTextWeight: next,
+                    customTextGlow: textGlow
+                  } as Partial<ExtendedCounter>);
+
+                  const savedTextWeights = safeGetItem('counterCustomTextWeights');
+                  savedTextWeights[counter.id] = next;
+                  safeSetItem('counterCustomTextWeights', savedTextWeights);
+                }}
+                className={`px-3 py-2 rounded-xl border transition-colors text-sm font-semibold flex items-center justify-center gap-2 min-w-[3rem] ${
+                  textWeight === 'bold'
+                    ? 'bg-blue-600 border-blue-400 text-white shadow-inner'
+                    : 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600'
+                }`}
+                title={textWeight === 'bold' ? 'Disable bold' : 'Enable bold'}
+                aria-pressed={textWeight === 'bold'}
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="drop-shadow-sm"
+                >
+                  <path d="M7 6h7a3 3 0 0 1 0 6H7z" />
+                  <path d="M7 12h9a3 3 0 0 1 0 6H7z" />
+                </svg>
+                <span className="sr-only">Toggle bold</span>
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const next = !textGlow;
+                  setTextGlow(next);
+                  onUpdate({
+                    customText: textValue,
+                    customTextSize: textSize,
+                    customTextColor: textColor,
+                    customTextWeight: textWeight,
+                    customTextGlow: next
+                  } as Partial<ExtendedCounter>);
+
+                  const savedTextGlow = safeGetItem('counterCustomTextGlow');
+                  savedTextGlow[counter.id] = next;
+                  safeSetItem('counterCustomTextGlow', savedTextGlow);
+                }}
+                className={`px-3 py-2 rounded-xl border transition-colors text-sm font-semibold flex items-center justify-center gap-2 min-w-[3rem] ${
+                  textGlow
+                    ? 'bg-purple-600 border-purple-400 text-white shadow-inner'
+                    : 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600'
+                }`}
+                title={textGlow ? 'Disable glow' : 'Enable glow'}
+                aria-pressed={textGlow}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.1"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="drop-shadow-sm"
+                >
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 2v2" />
+                  <path d="M12 20v2" />
+                  <path d="m4.93 4.93 1.42 1.42" />
+                  <path d="m17.65 17.65 1.42 1.42" />
+                  <path d="M2 12h2" />
+                  <path d="M20 12h2" />
+                  <path d="m6.35 17.65-1.42 1.42" />
+                  <path d="m19.07 4.93-1.42 1.42" />
+                </svg>
+                <span className="sr-only">Toggle glow</span>
+              </button>
             </div>
 
             <div className="space-y-3">
@@ -419,32 +573,42 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
                   handleTextChange(e.target.value);
                 }}
                 placeholder="Enter custom text..."
-                className={`w-full px-4 py-3 bg-gray-700/80 border border-gray-600/80 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
-                  textColor === 'white' ? 'text-white' :
-                  textColor === 'golden' ? 'text-yellow-400' :
-                  textColor === 'yellow' ? 'text-yellow-200' :
-                  'text-orange-200'
-                }`}
+                className={`w-full px-4 py-3 bg-gray-700/80 border border-gray-600/80 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-white`}
                 style={{
-                  minHeight: '96px',
-                  fontSize: textSize === 'sm' ? '0.875rem' :
-                           textSize === 'md' ? '1rem' :
-                           textSize === 'lg' ? '1.125rem' : '1.25rem',
-                  height: 'auto'
+                  minHeight: '112px',
+                  fontSize:
+                    textSize === 'xs' ? '0.85rem' :
+                    textSize === 'sm' ? '0.95rem' :
+                    textSize === 'md' ? '1.05rem' :
+                    textSize === 'lg' ? '1.15rem' :
+                    textSize === 'xl' ? '1.25rem' : '1.35rem',
+                  lineHeight: 1.5,
+                  color: TEXT_COLOR_HEX[textColor]
                 }}
-                rows={Math.min(8, Math.max(3, Math.ceil(textValue.length / 50) + 2))}
+                rows={Math.min(10, Math.max(4, Math.ceil(textValue.length / 60) + 2))}
               />
-              {textValue && (
+              <div className="flex flex-row flex-wrap items-center justify-end gap-2">
+                {textValue && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClearText();
+                    }}
+                    className="inline-flex items-center justify-center rounded-xl border border-red-400/70 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 hover:bg-red-500/20 hover:border-red-300 transition-colors"
+                  >
+                    Clear Text
+                  </button>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleClearText();
+                    setShowCustomization(false);
                   }}
-                  className="w-full inline-flex items-center justify-center rounded-xl border border-red-400/60 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 hover:bg-red-500/20 hover:border-red-300 transition-colors"
+                  className="inline-flex items-center justify-center rounded-xl border border-gray-500/70 bg-gray-700/40 px-4 py-2 text-sm font-medium text-gray-200 hover:bg-gray-600/50 hover:border-gray-400 transition-colors"
                 >
-                  Clear Text
+                  Close
                 </button>
-              )}
+              </div>
             </div>
 
             {imagePreview && (
@@ -456,9 +620,9 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
                   <Image
                     src={imagePreview}
                     alt="Custom counter image"
-                    width={400}
-                    height={300}
-                    className="w-full max-h-24 md:max-h-32 h-auto object-cover rounded-md border border-gray-600"
+                    width={800}
+                    height={600}
+                    className="w-full h-auto max-h-48 md:max-h-60 object-contain rounded-md border border-gray-600"
                   />
                   <div className="absolute top-1 right-1 md:top-2 md:right-2">
                     <button
