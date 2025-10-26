@@ -84,6 +84,13 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
   const [separatorPosition, setSeparatorPosition] = useState(50); // Percentage
   const [isDragging, setIsDragging] = useState(false);
 
+  const updateSeparatorPosition = useCallback((position: number) => {
+    setSeparatorPosition(prev => {
+      const clamped = Math.max(20, Math.min(80, position));
+      return Math.abs(prev - clamped) < 0.5 ? prev : clamped;
+    });
+  }, []);
+
   // Handle separator drag
   const handleSeparatorMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -91,8 +98,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
   };
 
   // Handle touch events for mobile
-  const handleSeparatorTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault();
+  const handleSeparatorTouchStart = () => {
     setIsDragging(true);
   };
 
@@ -103,7 +109,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
         if (container) {
           const containerRect = container.getBoundingClientRect();
           const newPosition = ((e.clientY - containerRect.top) / containerRect.height) * 100;
-          setSeparatorPosition(Math.max(20, Math.min(80, newPosition)));
+          updateSeparatorPosition(newPosition);
         }
       }
     };
@@ -115,7 +121,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
           const containerRect = container.getBoundingClientRect();
           const touch = e.touches[0];
           const newPosition = ((touch.clientY - containerRect.top) / containerRect.height) * 100;
-          setSeparatorPosition(Math.max(20, Math.min(80, newPosition)));
+          updateSeparatorPosition(newPosition);
         }
       }
     };
@@ -130,7 +136,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
 
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchmove', handleTouchMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.addEventListener('touchend', handleTouchEnd);
       document.body.style.cursor = 'row-resize';
@@ -152,7 +158,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, [isDragging]);
+  }, [isDragging, updateSeparatorPosition]);
 
   // Bubble state (unconditional hook usage to keep hook order stable)
   const [bubbles, setBubbles] = useState<Bubble[]>([]);

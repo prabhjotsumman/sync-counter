@@ -334,8 +334,8 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
       {showCustomization && (
         <div
           ref={panelRef}
-          className="fixed md:absolute bg-gray-800 rounded-lg p-4 md:p-6 shadow-xl border border-gray-600 z-[60]
-                     w-[min(90vw,24rem)] max-w-sm mx-4 md:mx-0
+          className="fixed md:absolute bg-gray-800 rounded-2xl p-4 md:p-6 shadow-xl border border-gray-600 z-[60]
+                     w-[min(92vw,24rem)] max-w-md
                      top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2
                      md:w-auto md:max-w-md md:top-0 md:bottom-auto md:left-auto md:right-2 md:transform-none"
           style={{
@@ -360,11 +360,9 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
             </button>
           </div>
 
-          <div className="space-y-4 md:space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-2">
-                Text Size
-              </label>
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-sm font-medium text-gray-200">Text Size</span>
               <div className="flex items-center gap-2">
                 {TEXT_SIZE_OPTIONS.map(({ size, label, iconWidth }) => (
                   <button
@@ -388,11 +386,9 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-2">
-                Text Color
-              </label>
-              <div className="flex gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-sm font-medium text-gray-200">Text Color</span>
+              <div className="flex items-center gap-2">
                 {[
                   { key: 'white', color: '#FFFFFF', label: 'White' },
                   { key: 'golden', color: '#FBBF24', label: 'Golden' },
@@ -415,10 +411,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-2">
-                Custom Text
-              </label>
+            <div className="space-y-3">
               <textarea
                 value={textValue}
                 onChange={(e) => {
@@ -426,14 +419,14 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
                   handleTextChange(e.target.value);
                 }}
                 placeholder="Enter custom text..."
-                className={`w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
+                className={`w-full px-4 py-3 bg-gray-700/80 border border-gray-600/80 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
                   textColor === 'white' ? 'text-white' :
                   textColor === 'golden' ? 'text-yellow-400' :
                   textColor === 'yellow' ? 'text-yellow-200' :
                   'text-orange-200'
                 }`}
                 style={{
-                  minHeight: '80px',
+                  minHeight: '96px',
                   fontSize: textSize === 'sm' ? '0.875rem' :
                            textSize === 'md' ? '1rem' :
                            textSize === 'lg' ? '1.125rem' : '1.25rem',
@@ -447,7 +440,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
                     e.stopPropagation();
                     handleClearText();
                   }}
-                  className="mt-2 text-xs text-gray-400 hover:text-red-400 transition-colors"
+                  className="w-full inline-flex items-center justify-center rounded-xl border border-red-400/60 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 hover:bg-red-500/20 hover:border-red-300 transition-colors"
                 >
                   Clear Text
                 </button>

@@ -11,6 +11,64 @@ import { Counter } from './counters';
 import { PendingChange } from './offlineStorage';
 import { getTodayString } from '../utils';
 
+const MAX_HISTORY_DAYS_STORED = 14;
+
+const isQuotaExceededError = (error: unknown): boolean => {
+    if (typeof window === 'undefined') return false;
+    if (error instanceof DOMException) {
+        return error.name === 'QuotaExceededError' || error.code === 22 || error.code === 1014;
+    }
+    return false;
+};
+
+const cloneHistoryEntry = (entry: NonNullable<Counter['history']>[string]) => ({
+    users: { ...entry.users },
+    total: entry.total,
+    day: entry.day
+});
+
+const sanitizeCountersForStorage = (counters: Counter[]): Counter[] => {
+    return counters.map(counter => {
+        const sanitized: Counter = {
+            id: counter.id,
+            name: counter.name,
+            value: counter.value,
+            lastUpdated: counter.lastUpdated ?? Date.now(),
+            dailyGoal: counter.dailyGoal,
+            dailyCount: counter.dailyCount
+        };
+
+        if (counter.users) {
+            sanitized.users = { ...counter.users };
+        }
+
+        if (counter.history) {
+            const historyEntries = Object.entries(counter.history)
+                .sort((a, b) => b[0].localeCompare(a[0]))
+                .slice(0, MAX_HISTORY_DAYS_STORED);
+
+            if (historyEntries.length > 0) {
+                sanitized.history = historyEntries.reduce<NonNullable<Counter['history']>>((acc, [date, entry]) => {
+                    acc[date] = cloneHistoryEntry(entry);
+                    return acc;
+                }, {} as NonNullable<Counter['history']>);
+            }
+        }
+
+        return sanitized;
+    });
+};
+
+const buildMinimalCountersSnapshot = (counters: Counter[]): Counter[] =>
+    counters.map(counter => ({
+        id: counter.id,
+        name: counter.name,
+        value: counter.value,
+        lastUpdated: counter.lastUpdated ?? Date.now(),
+        dailyGoal: counter.dailyGoal,
+        dailyCount: counter.dailyCount
+    }));
+
 // Utility function to ensure dailyCount is synchronized with history for all counters
 export function ensureDailyCountsFromHistory(counters: Counter[]): Counter[] {
   const today = getTodayString();
@@ -145,14 +203,38 @@ export function saveOfflineCounters(counters: Counter[], serverSyncTime?: number
         const data = existingData
             ? JSON.parse(existingData)
             : { counters: [], lastSync: 0, lastServerSync: 0 };
-        data.counters = counters;
+
+        const sanitizedCounters = sanitizeCountersForStorage(counters);
+
+        data.counters = sanitizedCounters;
         data.lastSync = Date.now();
         if (serverSyncTime) {
             data.lastServerSync = serverSyncTime;
         }
-        localStorage.setItem('offline_counters', JSON.stringify(data));
+        const payload = JSON.stringify(data);
+        localStorage.setItem('offline_counters', payload);
     } catch (error) {
-        console.error('Failed to save offline counters:', error);
+        if (isQuotaExceededError(error)) {
+            console.warn('⚠️ Offline counter storage exceeded quota. Attempting to prune data.');
+            try {
+                const minimalData = {
+                    counters: buildMinimalCountersSnapshot(counters),
+                    lastSync: Date.now(),
+                    lastServerSync: serverSyncTime ?? 0
+                };
+                localStorage.setItem('offline_counters', JSON.stringify(minimalData));
+                return;
+            } catch (retryError) {
+                console.error('❌ Failed to store minimal offline counters snapshot, clearing storage.', retryError);
+                try {
+                    localStorage.removeItem('offline_counters');
+                } catch (removeError) {
+                    console.error('❌ Failed to clear offline counters key after quota error:', removeError);
+                }
+            }
+        } else {
+            console.error('Failed to save offline counters:', error);
+        }
     }
 }
 
