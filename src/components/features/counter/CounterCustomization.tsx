@@ -1,10 +1,10 @@
 'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { ImageIcon, TextIcon } from '@/components/ui/CounterIcons';
 import type { Counter } from '@/types';
 
-// Extended counter interface with custom properties
 interface ExtendedCounter extends Counter {
   customImage?: string;
   customText?: string;
@@ -12,14 +12,21 @@ interface ExtendedCounter extends Counter {
   customTextColor?: 'white' | 'golden' | 'yellow' | 'orange';
 }
 
-/**
- * CounterCustomization component - Handles image and text customization for full screen mode
- */
 interface CounterCustomizationProps {
   counter: Counter;
   onUpdate: (updates: Partial<ExtendedCounter>) => void;
   className?: string;
 }
+
+const MAX_IMAGE_DIMENSION = 1600;
+
+const TEXT_SIZE_OPTIONS: readonly { size: 'sm' | 'md' | 'lg' | 'xl'; label: string; iconWidth: number }[] = [
+  { size: 'sm', label: 'Small (A-)', iconWidth: 16 },
+  { size: 'md', label: 'Medium', iconWidth: 20 },
+  { size: 'lg', label: 'Large (A+)', iconWidth: 24 },
+  { size: 'xl', label: 'Extra Large (A++)', iconWidth: 28 }
+] as const;
+
 const CounterCustomization: React.FC<CounterCustomizationProps> = ({
   counter,
   onUpdate,
@@ -36,21 +43,27 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Close panel when clicking outside
   useEffect(() => {
+    if (!showCustomization) return;
+
     const handleClickOutside = (event: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
         setShowCustomization(false);
       }
     };
 
-    if (showCustomization) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showCustomization]);
 
-  // Load fallback image from localStorage if counter data doesn't have one
+  useEffect(() => {
+    const extendedCounter = counter as ExtendedCounter;
+    setTextValue(extendedCounter.customText || '');
+    setTextSize(extendedCounter.customTextSize || 'md');
+    setTextColor(extendedCounter.customTextColor || 'white');
+    setImagePreview(extendedCounter.customImage || null);
+  }, [counter]);
+
   useEffect(() => {
     const extendedCounter = counter as ExtendedCounter;
     const savedImages = safeGetItem('counterCustomImages');
@@ -63,45 +76,93 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     }
   }, [counter, imagePreview, onUpdate]);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImageLossless = async (file: File): Promise<string> => {
+    if (typeof window === 'undefined') {
+      throw new Error('Image compression is only available in the browser');
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new window.Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Failed to load image for compression'));
+      img.src = objectUrl;
+    }).finally(() => {
+      URL.revokeObjectURL(objectUrl);
+    });
+
+    let { width, height } = image;
+    const maxDimension = Math.max(width, height);
+    if (maxDimension > MAX_IMAGE_DIMENSION) {
+      const scale = MAX_IMAGE_DIMENSION / maxDimension;
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Unable to create canvas context for image compression');
+    }
+    ctx.drawImage(image, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/png')
+    );
+
+    if (!blob) {
+      throw new Error('Failed to compress image');
+    }
+
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to convert compressed image to base64'));
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     console.log('📁 File input triggered');
     const file = event.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
       console.log('🖼️ Valid image file selected:', file.name);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64Image = e.target?.result as string;
-        console.log('✅ Image loaded as base64, length:', base64Image.length);
+      try {
+        const base64Image = await compressImageLossless(file);
+        console.log('✅ Image compressed and converted to base64, length:', base64Image.length);
         setImagePreview(base64Image);
         onUpdate({ customImage: base64Image } as Partial<ExtendedCounter>);
 
-        // Always save to localStorage as fallback (try anyway)
         try {
           const savedImages = safeGetItem('counterCustomImages');
           savedImages[`${counter.id}_fallback`] = base64Image;
           safeSetItem('counterCustomImages', savedImages);
           console.log('💾 Image saved to localStorage as fallback');
 
-          // Also try to save the main entry (for small images)
-          if (base64Image.length < 500000) { // 500KB limit
+          if (base64Image.length < 500000) {
             savedImages[counter.id] = base64Image;
             safeSetItem('counterCustomImages', savedImages);
           }
 
-          // Clean up old fallback entries periodically (keep only last 10)
           const fallbackKeys = Object.keys(savedImages).filter(key => key.endsWith('_fallback'));
           if (fallbackKeys.length > 10) {
-            fallbackKeys.sort().slice(0, fallbackKeys.length - 10).forEach(key => {
-              delete savedImages[key];
-            });
+            fallbackKeys
+              .sort()
+              .slice(0, fallbackKeys.length - 10)
+              .forEach(key => {
+                delete savedImages[key];
+              });
             safeSetItem('counterCustomImages', savedImages);
             console.log('🧹 Cleaned up old localStorage image entries');
           }
         } catch (error) {
           console.warn('⚠️ Could not save image to localStorage:', error);
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (error) {
+        console.warn('⚠️ Failed to process image upload:', error);
+      }
     } else {
       console.log('❌ No valid image file selected');
     }
@@ -111,7 +172,6 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     setImagePreview(null);
     onUpdate({ customImage: undefined } as Partial<ExtendedCounter>);
 
-    // Safely remove from localStorage
     const savedImages = safeGetItem('counterCustomImages');
     delete savedImages[counter.id];
     delete savedImages[`${counter.id}_fallback`];
@@ -126,17 +186,14 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
       customTextColor: textColor
     } as Partial<ExtendedCounter>);
 
-    // Safely save to localStorage
     const savedTexts = safeGetItem('counterCustomTexts');
     savedTexts[counter.id] = newText;
     safeSetItem('counterCustomTexts', savedTexts);
 
-    // Save text size
     const savedTextSizes = safeGetItem('counterCustomTextSizes');
     savedTextSizes[counter.id] = textSize;
     safeSetItem('counterCustomTextSizes', savedTextSizes);
 
-    // Save text color
     const savedTextColors = safeGetItem('counterCustomTextColors');
     savedTextColors[counter.id] = textColor;
     safeSetItem('counterCustomTextColors', savedTextColors);
@@ -150,7 +207,6 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
       customTextColor: textColor
     } as Partial<ExtendedCounter>);
 
-    // Safely save to localStorage
     const savedTextSizes = safeGetItem('counterCustomTextSizes');
     savedTextSizes[counter.id] = newSize;
     safeSetItem('counterCustomTextSizes', savedTextSizes);
@@ -164,7 +220,6 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
       customTextColor: newColor
     } as Partial<ExtendedCounter>);
 
-    // Safely save to localStorage
     const savedTextColors = safeGetItem('counterCustomTextColors');
     savedTextColors[counter.id] = newColor;
     safeSetItem('counterCustomTextColors', savedTextColors);
@@ -178,23 +233,19 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
       customTextColor: 'white'
     } as Partial<ExtendedCounter>);
 
-    // Safely remove from localStorage
     const savedTexts = safeGetItem('counterCustomTexts');
     delete savedTexts[counter.id];
     safeSetItem('counterCustomTexts', savedTexts);
 
-    // Remove text size
     const savedTextSizes = safeGetItem('counterCustomTextSizes');
     delete savedTextSizes[counter.id];
     safeSetItem('counterCustomTextSizes', savedTextSizes);
 
-    // Remove text color
     const savedTextColors = safeGetItem('counterCustomTextColors');
     delete savedTextColors[counter.id];
     safeSetItem('counterCustomTextColors', savedTextColors);
   };
 
-  // Safe localStorage utility to prevent quota errors
   const safeGetItem = (key: string) => {
     try {
       const item = localStorage.getItem(key);
@@ -205,7 +256,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     }
   };
 
-  const safeSetItem = (key: string, value: any) => {
+  const safeSetItem = (key: string, value: unknown) => {
     try {
       localStorage.setItem(key, JSON.stringify(value));
       return true;
@@ -217,7 +268,6 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
 
   return (
     <div className={`flex flex-col gap-2 md:gap-3 ${className}`} style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}>
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -227,7 +277,6 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
         className="hidden"
       />
 
-      {/* Image Upload Button */}
       <button
         className="bg-gray-900 hover:bg-gray-700 text-white rounded-full shadow-lg w-12 h-12 md:w-14 md:h-14 flex items-center justify-center text-lg md:text-xl border border-gray-700 transition-colors cursor-pointer"
         style={{ pointerEvents: 'auto' }}
@@ -246,7 +295,6 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
         <ImageIcon />
       </button>
 
-      {/* Text Button */}
       <button
         className="bg-gray-900 hover:bg-gray-700 text-white rounded-full shadow-lg w-12 h-12 md:w-14 md:h-14 flex items-center justify-center text-lg md:text-xl border border-gray-700 transition-colors cursor-pointer"
         style={{ pointerEvents: 'auto' }}
@@ -265,7 +313,6 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
         <TextIcon />
       </button>
 
-      {/* Backdrop overlay when panel is open */}
       {showCustomization && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-[60]"
@@ -276,7 +323,6 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
         />
       )}
 
-      {/* Customization Panel */}
       {showCustomization && (
         <div
           ref={panelRef}
@@ -290,7 +336,6 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Modal Header */}
           <div className="flex items-center justify-between mb-4 md:mb-6">
             <h3 className="text-lg md:text-xl font-semibold text-white">Customize Text</h3>
             <button
@@ -308,80 +353,33 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
           </div>
 
           <div className="space-y-4 md:space-y-6">
-            {/* Text Size Controls */}
             <div>
               <label className="block text-sm font-medium text-gray-200 mb-2">
                 Text Size
               </label>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleTextSizeChange('sm');
-                  }}
-                  className={`p-2 rounded border transition-colors ${
-                    textSize === 'sm'
-                      ? 'bg-blue-600 border-blue-500 text-white'
-                      : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
-                  }`}
-                  title="Small (A-)"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M6 9h12v6H6V9zm0 8h12v2H6v-2z"/>
-                  </svg>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleTextSizeChange('md');
-                  }}
-                  className={`p-2 rounded border transition-colors ${
-                    textSize === 'md'
-                      ? 'bg-blue-600 border-blue-500 text-white'
-                      : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
-                  }`}
-                  title="Medium"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M6 9h12v6H6V9zm0 8h12v2H6v-2z"/>
-                  </svg>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleTextSizeChange('lg');
-                  }}
-                  className={`p-2 rounded border transition-colors ${
-                    textSize === 'lg'
-                      ? 'bg-blue-600 border-blue-500 text-white'
-                      : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
-                  }`}
-                  title="Large (A+)"
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M6 9h12v6H6V9zm0 8h12v2H6v-2z"/>
-                  </svg>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleTextSizeChange('xl');
-                  }}
-                  className={`p-2 rounded border transition-colors ${
-                    textSize === 'xl'
-                      ? 'bg-blue-600 border-blue-500 text-white'
-                      : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
-                  }`}
-                  title="Extra Large (A++)"
-                >
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M6 9h12v6H6V9zm0 8h12v2H6v-2z"/>
-                  </svg>
-                </button>
+                {TEXT_SIZE_OPTIONS.map(({ size, label, iconWidth }) => (
+                  <button
+                    key={size}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTextSizeChange(size);
+                    }}
+                    className={`p-2 rounded border transition-colors ${
+                      textSize === size
+                        ? 'bg-blue-600 border-blue-500 text-white'
+                        : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
+                    }`}
+                    title={label}
+                  >
+                    <svg width={iconWidth} height={iconWidth} viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M6 9h12v6H6V9zm0 8h12v2H6v-2z" />
+                    </svg>
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Text Color Options */}
             <div>
               <label className="block text-sm font-medium text-gray-200 mb-2">
                 Text Color
@@ -409,7 +407,6 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
               </div>
             </div>
 
-            {/* Text Input */}
             <div>
               <label className="block text-sm font-medium text-gray-200 mb-2">
                 Custom Text
@@ -449,7 +446,6 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
               )}
             </div>
 
-            {/* Image Preview */}
             {imagePreview && (
               <div>
                 <label className="block text-sm font-medium text-gray-200 mb-2">
@@ -457,13 +453,12 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
                 </label>
                 <div className="relative">
                   <Image
-                    src={imagePreview!}
+                    src={imagePreview}
                     alt="Custom counter image"
                     width={400}
                     height={300}
                     className="w-full max-h-24 md:max-h-32 h-auto object-cover rounded-md border border-gray-600"
                   />
-                  {/* Remove button - always visible */}
                   <div className="absolute top-1 right-1 md:top-2 md:right-2">
                     <button
                       onClick={(e) => {

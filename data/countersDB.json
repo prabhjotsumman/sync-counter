@@ -2,13 +2,13 @@
   {
     "id": "counter-1761435507469",
     "name": "Param",
-    "value": 140,
-    "lastUpdated": 1761498652785,
+    "value": 148,
+    "lastUpdated": 1761499336159,
     "dailyGoal": 150,
     "users": {
       "Param": 5,
       "Joe": 71,
-      "Prabh": 160
+      "Prabh": 168
     },
     "history": {
       "2025-10-25": {
@@ -20,13 +20,13 @@
       },
       "2025-10-26": {
         "users": {
-          "Prabh": 140
+          "Prabh": 148
         },
-        "total": 140,
+        "total": 148,
         "day": "Sunday"
       }
     },
-    "dailyCount": 140
+    "dailyCount": 148
   },
   {
     "id": "counter-1761435517755",

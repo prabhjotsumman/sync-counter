@@ -38,6 +38,14 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     const updatedCounter = { ...counter, ...updates } as ExtendedCounter;
     handleCounterUpdate(id, updatedCounter);
 
+    // If removing the image, also clear any stored fallbacks
+    if (updates.customImage === undefined) {
+      const savedImages = safeGetItem('counterCustomImages');
+      delete savedImages[counter?.id ?? id];
+      delete savedImages[`${counter?.id ?? id}_fallback`];
+      safeSetItem('counterCustomImages', savedImages);
+    }
+
     // Update local state immediately for responsive UI
     if (updates.customImage !== undefined) {
       setCustomImage(updates.customImage || null);
@@ -61,6 +69,14 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     } catch (error) {
       console.warn(`⚠️ Could not read from localStorage (${key}):`, error);
       return {};
+    }
+  };
+
+  const safeSetItem = (key: string, value: unknown) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.warn(`⚠️ Could not write to localStorage (${key}):`, error);
     }
   };
 
