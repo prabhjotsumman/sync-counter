@@ -5,7 +5,8 @@ import ProgressBar from './ProgressBar';
 import CounterCustomization from './CounterCustomization';
 import { useCounterContext } from '@/providers/CounterContext';
 import { useCounterLogic } from '@/hooks/useCounterLogic';
-import type { Counter } from '@/types';
+import type { Counter } from '@/lib/counters';
+import { loadCustomImage, saveCustomImage, clearCustomImage } from '@/lib/customImageStorage';
 
 type Bubble = { id: number; createdAt: number };
 
@@ -17,6 +18,7 @@ interface FullScreenCounterModalProps {
 
 // Extended counter interface with custom properties
 interface ExtendedCounter extends Counter {
+  image_url?: string | null;
   customImage?: string;
   customText?: string;
   customTextSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
@@ -63,6 +65,9 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
   const fullscreenRequestedRef = useRef(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const hideControlsTimeoutRef = useRef<number | null>(null);
+
+  const [separatorPosition, setSeparatorPosition] = useState(50);
+  const [isDragging, setIsDragging] = useState(false);
 
   const textDisplayClass = useMemo(() => {
     const baseClass = SIZE_CLASS_MAP[customTextSize] ?? SIZE_CLASS_MAP.md;
@@ -115,17 +120,15 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     const updatedCounter = { ...counter, ...updates } as ExtendedCounter;
     handleCounterUpdate(id, updatedCounter);
 
-    // If removing the image, also clear any stored fallbacks
-    if (updates.customImage === undefined) {
-      const savedImages = safeGetItem('counterCustomImages');
-      delete savedImages[counter?.id ?? id];
-      delete savedImages[`${counter?.id ?? id}_fallback`];
-      safeSetItem('counterCustomImages', savedImages);
-    }
-
-    // Update local state immediately for responsive UI
-    if (updates.customImage !== undefined) {
-      setCustomImage(updates.customImage || null);
+    if ('customImage' in updates) {
+      const imageValue = updates.customImage;
+      if (imageValue) {
+        setCustomImage(imageValue);
+        saveCustomImage(counter?.id ?? id, imageValue);
+      } else {
+        setCustomImage(null);
+        clearCustomImage(counter?.id ?? id);
+      }
     }
     if (updates.customText !== undefined) {
       setCustomText(updates.customText || '');
@@ -144,7 +147,6 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     }
   };
 
-  // Safe localStorage utility to prevent quota errors
   const safeGetItem = (key: string) => {
     try {
       const item = localStorage.getItem(key);
@@ -154,18 +156,6 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
       return {};
     }
   };
-
-  const safeSetItem = (key: string, value: unknown) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (error) {
-      console.warn(`⚠️ Could not write to localStorage (${key}):`, error);
-    }
-  };
-
-  // Draggable separator state
-  const [separatorPosition, setSeparatorPosition] = useState(50); // Percentage
-  const [isDragging, setIsDragging] = useState(false);
 
   const updateSeparatorPosition = useCallback((position: number) => {
     setSeparatorPosition(prev => {
@@ -336,17 +326,15 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
 
     // Images are now stored in counter data, no need to load from localStorage
     const extendedCounter = counter as ExtendedCounter;
-    setCustomImage(extendedCounter.customImage || null);
+    setCustomImage(extendedCounter.customImage || extendedCounter.image_url || null);
 
     // Load fallback image from localStorage if counter data doesn't have one
-    const savedImages = safeGetItem('counterCustomImages');
-    const fallbackImage = savedImages[`${counter.id}_fallback`] || savedImages[counter.id];
+    const storedImage = loadCustomImage(counter.id);
 
-    if (fallbackImage && !extendedCounter.customImage) {
-      console.log('🔄 Loading image from localStorage fallback');
-      setCustomImage(fallbackImage);
-      // Update counter data without calling handleCustomizationUpdate to avoid hook inconsistencies
-      handleCounterUpdate(id, { ...counter, customImage: fallbackImage } as ExtendedCounter);
+    if (storedImage && !extendedCounter.customImage && !extendedCounter.image_url) {
+      console.log('🔄 Loading image from storage helper (fullscreen)');
+      setCustomImage(storedImage);
+      handleCounterUpdate(id, { ...counter, customImage: storedImage, image_url: undefined } as ExtendedCounter);
     }
 
     // Load saved text
@@ -381,7 +369,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
   const baseCounter = counter as ExtendedCounter;
   const counterWithLocalCustomizations: ExtendedCounter = {
     ...baseCounter,
-    customImage: customImage ?? baseCounter.customImage,
+    customImage: customImage ?? baseCounter.customImage ?? baseCounter.image_url ?? undefined,
     customText: customText || baseCounter.customText,
     customTextSize: customTextSize || baseCounter.customTextSize,
     customTextColor: customTextColor || baseCounter.customTextColor,
@@ -413,11 +401,11 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
         {/* Custom content above value - Flexible layout */}
         {(customImage || customText) && (
           <div
-            className="flex flex-col w-full max-w-6xl px-4 mb-6 md:mb-10"
+            className="flex flex-col w-full max-w-6xl px-4 mb-2 md:mb-4"
             data-separator-container
             style={{
-              height: customImage && customText ? 'calc(100vh - 6rem)' : 'calc(100vh - 9rem)',
-              maxHeight: customImage && customText ? '80vh' : '72vh'
+              height: customImage && customText ? 'calc(100vh - 4rem)' : 'calc(100vh - 6rem)',
+              maxHeight: customImage && customText ? '88vh' : '82vh'
             }}
           >
             {customImage && customText ? (
@@ -484,7 +472,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
                   style={{ height: `${100 - separatorPosition}%` }}
                 >
                   <div className="w-full max-w-full h-full flex items-center justify-center">
-                    <div className="max-h-full overflow-y-auto px-3 py-3 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                    <div className="max-h-full overflow-y-auto px-3 py-5 pb-8 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
                       <p
                         className={`text-center drop-shadow-lg leading-relaxed whitespace-pre-wrap break-words ${textDisplayClass}`}
                         style={{
@@ -537,7 +525,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
                 )}
 
                 {customText && (
-                  <div className="max-h-[68vh] overflow-y-auto px-3 py-3 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                  <div className="max-h-[75vh] overflow-y-auto px-3 py-5 pb-10 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
                     <p
                       className={`text-center drop-shadow-lg max-w-[82vw] md:max-w-3xl break-words leading-relaxed whitespace-pre-wrap ${textDisplayClass}`}
                       style={textStyle}

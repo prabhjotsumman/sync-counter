@@ -35,7 +35,8 @@ const sanitizeCountersForStorage = (counters: Counter[]): Counter[] => {
             value: counter.value,
             lastUpdated: counter.lastUpdated ?? Date.now(),
             dailyGoal: counter.dailyGoal,
-            dailyCount: counter.dailyCount
+            dailyCount: counter.dailyCount,
+            image_url: counter.image_url ?? null
         };
 
         if (counter.users) {
@@ -66,7 +67,8 @@ const buildMinimalCountersSnapshot = (counters: Counter[]): Counter[] =>
         value: counter.value,
         lastUpdated: counter.lastUpdated ?? Date.now(),
         dailyGoal: counter.dailyGoal,
-        dailyCount: counter.dailyCount
+        dailyCount: counter.dailyCount,
+        image_url: counter.image_url ?? null
     }));
 
 // Utility function to ensure dailyCount is synchronized with history for all counters
@@ -146,7 +148,8 @@ export function updateOfflineCounterData(id: string, counterData: Omit<Counter, 
                 value: updatedCounter.value,
                 dailyGoal: updatedCounter.dailyGoal,
                 dailyCount: updatedCounter.dailyCount,
-                history: updatedCounter.history
+                history: updatedCounter.history,
+                image_url: updatedCounter.image_url ?? null
             }
         });
         return updatedCounter;
@@ -321,7 +324,8 @@ export function addOfflineCounter(counterData: Omit<Counter, 'id'> & { id?: stri
             name: counterData.name,
             value: counterData.value,
             dailyGoal: safeDailyGoal,
-            lastUpdated: Date.now()
+            lastUpdated: Date.now(),
+            image_url: counterData.image_url ?? null
         };
         counters.push(newCounter);
         saveOfflineCounters(counters);
@@ -331,7 +335,8 @@ export function addOfflineCounter(counterData: Omit<Counter, 'id'> & { id?: stri
             counterData: {
                 name: newCounter.name,
                 value: newCounter.value,
-                dailyGoal: newCounter.dailyGoal
+                dailyGoal: newCounter.dailyGoal,
+                image_url: newCounter.image_url ?? null
             }
         });
         return newCounter;

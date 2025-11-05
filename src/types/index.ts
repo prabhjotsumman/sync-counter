@@ -26,6 +26,7 @@ export interface Counter {
     day?: string;
   }>;
   // Customization properties (for full screen mode)
+  image_url?: string | null; // persisted storage URL, if available
   customImage?: string; // base64 encoded image or URL
   customText?: string; // custom text to display above counter
 }

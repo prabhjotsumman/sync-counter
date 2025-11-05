@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { ImageIcon, TextIcon } from '@/components/ui/CounterIcons';
+import { loadCustomImage, saveCustomImage, clearCustomImage } from '@/lib/customImageStorage';
 import type { Counter } from '@/types';
 
 interface ExtendedCounter extends Counter {
@@ -67,7 +68,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
   const [showCustomization, setShowCustomization] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(() => {
     const extendedCounter = counter as ExtendedCounter;
-    return extendedCounter.customImage || null;
+    return extendedCounter.customImage || extendedCounter.image_url || null;
   });
   const [textValue, setTextValue] = useState((counter as ExtendedCounter).customText || '');
   const [textSize, setTextSize] = useState<CustomTextSize>((counter as ExtendedCounter).customTextSize || 'md');
@@ -111,13 +112,14 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
 
   useEffect(() => {
     const extendedCounter = counter as ExtendedCounter;
-    const savedImages = safeGetItem('counterCustomImages');
-    const fallbackImage = savedImages[`${counter.id}_fallback`] || savedImages[counter.id];
+    if (typeof window === 'undefined') return;
 
-    if (fallbackImage && !imagePreview && !extendedCounter.customImage) {
-      console.log('🔄 Loading image from localStorage fallback in customization');
-      setImagePreview(fallbackImage);
-      onUpdate({ customImage: fallbackImage } as Partial<ExtendedCounter>);
+    const storedImage = loadCustomImage(counter.id);
+
+    if (storedImage && !imagePreview && !extendedCounter.customImage) {
+      console.log('🔄 Loading image from localStorage storage helper in customization');
+      setImagePreview(storedImage);
+      onUpdate({ customImage: storedImage } as Partial<ExtendedCounter>);
     }
   }, [counter, imagePreview, onUpdate]);
 
@@ -173,58 +175,82 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     console.log('📁 File input triggered');
     const inputEl = event.target;
     const file = inputEl.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      console.log('🖼️ Valid image file selected:', file.name);
-      try {
-        const base64Image = await compressImageLossless(file);
-        console.log('✅ Image compressed and converted to base64, length:', base64Image.length);
-        setImagePreview(base64Image);
-        onUpdate({ customImage: base64Image } as Partial<ExtendedCounter>);
-
-        try {
-          const savedImages = safeGetItem('counterCustomImages');
-          savedImages[`${counter.id}_fallback`] = base64Image;
-          safeSetItem('counterCustomImages', savedImages);
-          console.log('💾 Image saved to localStorage as fallback');
-
-          if (base64Image.length < 500000) {
-            savedImages[counter.id] = base64Image;
-            safeSetItem('counterCustomImages', savedImages);
-          }
-
-          const fallbackKeys = Object.keys(savedImages).filter(key => key.endsWith('_fallback'));
-          if (fallbackKeys.length > 10) {
-            fallbackKeys
-              .sort()
-              .slice(0, fallbackKeys.length - 10)
-              .forEach(key => {
-                delete savedImages[key];
-              });
-            safeSetItem('counterCustomImages', savedImages);
-            console.log('🧹 Cleaned up old localStorage image entries');
-          }
-        } catch (error) {
-          console.warn('⚠️ Could not save image to localStorage:', error);
-        }
-      } catch (error) {
-        console.warn('⚠️ Failed to process image upload:', error);
-      }
-    } else {
+    if (!file || !file.type.startsWith('image/')) {
       console.log('❌ No valid image file selected');
+      inputEl.value = '';
+      return;
     }
 
-    // Reset input value so selecting the same file again still triggers change
+    console.log('🖼️ Valid image file selected:', file.name);
+
+    const fallbackToLocal = async () => {
+      try {
+        const base64Image = await compressImageLossless(file);
+        console.log('📦 Fallback: using local base64 image');
+        setImagePreview(base64Image);
+        onUpdate({ customImage: base64Image, image_url: undefined } as Partial<ExtendedCounter>);
+        saveCustomImage(counter.id, base64Image);
+      } catch (error) {
+        console.warn('⚠️ Failed to process image during fallback:', error);
+      }
+    };
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch(`/api/counters/${counter.id}/image`, {
+        method: 'PUT',
+        body: formData
+      });
+
+      if (!response.ok) {
+        console.warn('⚠️ Image upload failed with status', response.status);
+        await fallbackToLocal();
+      } else {
+        const data = await response.json();
+        const imageUrl = data?.image_url as string | undefined;
+        if (imageUrl) {
+          console.log('✅ Image uploaded to Supabase storage');
+          setImagePreview(imageUrl);
+          onUpdate({ customImage: imageUrl, image_url: imageUrl } as Partial<ExtendedCounter>);
+          saveCustomImage(counter.id, imageUrl);
+        } else {
+          console.warn('⚠️ Upload succeeded but no image_url returned');
+          await fallbackToLocal();
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to upload image to server:', error);
+      await fallbackToLocal();
+    }
+
     inputEl.value = '';
   };
 
-  const handleRemoveImage = () => {
-    setImagePreview(null);
-    onUpdate({ customImage: undefined } as Partial<ExtendedCounter>);
+  const handleRemoveImage = async () => {
+    const fallbackClear = () => {
+      setImagePreview(null);
+      onUpdate({ customImage: undefined, image_url: null } as Partial<ExtendedCounter>);
+      clearCustomImage(counter.id);
+    };
 
-    const savedImages = safeGetItem('counterCustomImages');
-    delete savedImages[counter.id];
-    delete savedImages[`${counter.id}_fallback`];
-    safeSetItem('counterCustomImages', savedImages);
+    try {
+      const response = await fetch(`/api/counters/${counter.id}/image`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        console.warn('⚠️ Failed to remove image from server, status', response.status);
+        fallbackClear();
+      } else {
+        console.log('🗑️ Image removed from Supabase storage');
+        fallbackClear();
+      }
+    } catch (error) {
+      console.warn('⚠️ Error while removing image from server:', error);
+      fallbackClear();
+    }
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';

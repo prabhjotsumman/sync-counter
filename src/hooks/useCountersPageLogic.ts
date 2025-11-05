@@ -27,6 +27,7 @@ export interface CounterData {
     dailyCount?: number;
     history?: Counter['history'];
     users?: Record<string, number>;
+    image_url?: string | null;
 }
 
 

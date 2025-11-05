@@ -11,6 +11,7 @@ export interface Counter {
     total: number;
     day?: string;
   }>;
+  image_url?: string | null;
 }
 
 // Type guard for Counter
@@ -113,31 +114,32 @@ export async function addCounter(counter: Counter): Promise<Counter> {
 }
 
 // Update a counter's value
-export async function updateCounter(id: string, updates: { name?: string; value?: number; dailyGoal?: number; dailyCount?: number; history?: Counter['history']; users?: Record<string, number> }): Promise<Counter | null> {
+export async function updateCounter(id: string, updates: { name?: string; value?: number; dailyGoal?: number; dailyCount?: number; history?: Counter['history']; users?: Record<string, number>; image_url?: string | null }): Promise<Counter | null> {
   if (isLocal && localDbPath) {
     const dbFile = path.resolve(process.cwd(), localDbPath);
     const counters: Counter[] = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile, 'utf-8')) : [];
     const idx = counters.findIndex(c => c.id === id);
     if (idx === -1) return null;
     const now = Date.now();
-  counters[idx] = { ...counters[idx], ...updates, lastUpdated: now };
+    counters[idx] = { ...counters[idx], ...updates, lastUpdated: now };
     fs.writeFileSync(dbFile, JSON.stringify(counters, null, 2));
     return counters[idx];
   } else {
     await ensureCountersTable();
     const counter = await getCounter(id);
     if (!counter) return null;
-  const now = Date.now();
-  const updateFields: Partial<Counter> = { lastUpdated: now };
-  if (typeof updates.value === 'number') updateFields.value = updates.value;
-  if (typeof updates.name === 'string') updateFields.name = updates.name;
-  if (typeof updates.dailyGoal === 'number') updateFields.dailyGoal = updates.dailyGoal;
-  if (typeof updates.dailyCount === 'number') updateFields.dailyCount = updates.dailyCount;
-  if (updates.history) updateFields.history = updates.history;
-  if (updates.users) updateFields.users = updates.users;
-  const { data, error } = await supabase!.from('counters').update(updateFields).eq('id', id).select().single();
-  if (error || !isCounter(data)) throw error;
-  return data as Counter;
+    const now = Date.now();
+    const updateFields: Partial<Counter> = { lastUpdated: now };
+    if (typeof updates.value === 'number') updateFields.value = updates.value;
+    if (typeof updates.name === 'string') updateFields.name = updates.name;
+    if (typeof updates.dailyGoal === 'number') updateFields.dailyGoal = updates.dailyGoal;
+    if (typeof updates.dailyCount === 'number') updateFields.dailyCount = updates.dailyCount;
+    if (updates.history) updateFields.history = updates.history;
+    if (updates.users) updateFields.users = updates.users;
+    if (updates.image_url !== undefined) updateFields.image_url = updates.image_url;
+    const { data, error } = await supabase!.from('counters').update(updateFields).eq('id', id).select().single();
+    if (error || !isCounter(data)) throw error;
+    return data as Counter;
   }
 }
 

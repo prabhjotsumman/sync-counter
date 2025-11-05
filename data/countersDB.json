@@ -2,13 +2,14 @@
   {
     "id": "counter-1761435507469",
     "name": "Param",
-    "value": 201,
-    "lastUpdated": 1761514072995,
-    "dailyGoal": 220,
+    "value": 247,
+    "lastUpdated": 1762118909542,
+    "dailyGoal": 250,
+    "image_url": null,
     "users": {
-      "Param": 5,
+      "Param": 22,
       "Joe": 71,
-      "Prabh": 221
+      "Prabh": 250
     },
     "history": {
       "2025-10-25": {
@@ -20,24 +21,40 @@
       },
       "2025-10-26": {
         "users": {
-          "Prabh": 201
+          "Prabh": 222
         },
-        "total": 201,
+        "total": 222,
+        "day": "Sunday"
+      },
+      "2025-10-27": {
+        "users": {
+          "Prabh": 7,
+          "Param": 17
+        },
+        "total": 24,
+        "day": "Monday"
+      },
+      "2025-11-02": {
+        "users": {
+          "Prabh": 1
+        },
+        "total": 1,
         "day": "Sunday"
       }
     },
-    "dailyCount": 201
+    "dailyCount": 1
   },
   {
     "id": "counter-1761435517755",
     "name": "Prabh",
-    "value": 10,
-    "lastUpdated": 1761492473788,
+    "value": 27,
+    "lastUpdated": 1762122688128,
     "dailyGoal": 50,
+    "image_url": null,
     "users": {
-      "Prabh": 45,
+      "Prabh": 46,
       "Simran": 4,
-      "Param": 4,
+      "Param": 20,
       "Joe": 5
     },
     "history": {
@@ -52,13 +69,27 @@
       },
       "2025-10-26": {
         "users": {
-          "Prabh": 10
+          "Prabh": 11
         },
-        "total": 10,
+        "total": 11,
+        "day": "Sunday"
+      },
+      "2025-10-27": {
+        "users": {
+          "Param": 14
+        },
+        "total": 14,
+        "day": "Monday"
+      },
+      "2025-11-02": {
+        "users": {
+          "Param": 2
+        },
+        "total": 2,
         "day": "Sunday"
       }
     },
-    "dailyCount": 10
+    "dailyCount": 2
   },
   {
     "id": "counter-1761511294530",
@@ -66,6 +97,7 @@
     "value": 155519,
     "lastUpdated": 1761511353797,
     "dailyGoal": 500,
+    "image_url": null,
     "users": {
       "Prabh": 19
     },
