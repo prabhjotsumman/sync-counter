@@ -12,6 +12,7 @@ export interface Counter {
     day?: string;
   }>;
   image_url?: string | null;
+  counter_text?: string | null;
 }
 
 // Type guard for Counter
@@ -114,7 +115,7 @@ export async function addCounter(counter: Counter): Promise<Counter> {
 }
 
 // Update a counter's value
-export async function updateCounter(id: string, updates: { name?: string; value?: number; dailyGoal?: number; dailyCount?: number; history?: Counter['history']; users?: Record<string, number>; image_url?: string | null }): Promise<Counter | null> {
+export async function updateCounter(id: string, updates: { name?: string; value?: number; dailyGoal?: number; dailyCount?: number; history?: Counter['history']; users?: Record<string, number>; image_url?: string | null; counter_text?: string | null }): Promise<Counter | null> {
   if (isLocal && localDbPath) {
     const dbFile = path.resolve(process.cwd(), localDbPath);
     const counters: Counter[] = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile, 'utf-8')) : [];
@@ -137,6 +138,7 @@ export async function updateCounter(id: string, updates: { name?: string; value?
     if (updates.history) updateFields.history = updates.history;
     if (updates.users) updateFields.users = updates.users;
     if (updates.image_url !== undefined) updateFields.image_url = updates.image_url;
+    if (updates.counter_text !== undefined) updateFields.counter_text = updates.counter_text;
     const { data, error } = await supabase!.from('counters').update(updateFields).eq('id', id).select().single();
     if (error || !isCounter(data)) throw error;
     return data as Counter;

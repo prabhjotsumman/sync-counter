@@ -21,7 +21,32 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-  const { name, value, dailyGoal, dailyCount, currentUser } = body;
+    const { name, value, dailyGoal, dailyCount, currentUser, counter_text } = body;
+
+    const isTextOnlyUpdate =
+      counter_text !== undefined &&
+      name === undefined &&
+      value === undefined &&
+      dailyGoal === undefined &&
+      dailyCount === undefined;
+
+    if (isTextOnlyUpdate) {
+      const existingCounter = await getCounter(id);
+      if (!existingCounter) {
+        return NextResponse.json({ error: 'Counter not found' }, { status: 404 });
+      }
+      const updatedCounter = await updateCounter(id, { counter_text: counter_text ?? null });
+      if (!updatedCounter) {
+        return NextResponse.json({ error: 'Counter not found' }, { status: 404 });
+      }
+      broadcastUpdate({
+        type: 'counter_updated',
+        counter: updatedCounter,
+        timestamp: Date.now(),
+        user: currentUser || null
+      });
+      return NextResponse.json({ counter: updatedCounter, timestamp: Date.now() });
+    }
 
     console.log('🔧 Server edit request:', {
       id,
@@ -56,7 +81,8 @@ export async function PUT(
         dailyCount: dailyCount || 0,
         users: {},
         history: {},
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
+        counter_text: counter_text ?? null
       });
 
       console.log(`Created new counter ${id} with name: ${newCounter.name}`);
@@ -67,13 +93,13 @@ export async function PUT(
       return NextResponse.json({ error: 'Failed to create counter' }, { status: 500 });
     }
 
-    const updateFields: Record<string, string | number> = { name: name.trim(), value };
+    const updateFields: Record<string, string | number | null> = { name: name.trim(), value };
     if (typeof dailyGoal === 'number') updateFields.dailyGoal = dailyGoal;
+    if (typeof dailyCount === 'number') updateFields.dailyCount = dailyCount;
+    if (counter_text !== undefined) updateFields.counter_text = counter_text ?? null;
 
     // Handle dailyCount adjustment
     if (typeof dailyCount === 'number') {
-      updateFields.dailyCount = dailyCount;
-
       // If dailyCount is provided, recalculate today's history to match
       if (counterToUpdate?.history) {
         const today = getTodayStringUTC(); // Use UTC-based date

@@ -27,6 +27,7 @@ export interface Counter {
   }>;
   // Customization properties (for full screen mode)
   image_url?: string | null; // persisted storage URL, if available
+  counter_text?: string | null; // persisted custom text from server
   customImage?: string; // base64 encoded image or URL
   customText?: string; // custom text to display above counter
 }

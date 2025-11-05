@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { ImageIcon, TextIcon } from '@/components/ui/CounterIcons';
 import { loadCustomImage, saveCustomImage, clearCustomImage } from '@/lib/customImageStorage';
@@ -70,7 +70,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     const extendedCounter = counter as ExtendedCounter;
     return extendedCounter.customImage || extendedCounter.image_url || null;
   });
-  const [textValue, setTextValue] = useState((counter as ExtendedCounter).customText || '');
+  const [textValue, setTextValue] = useState((counter as ExtendedCounter).customText || (counter as ExtendedCounter).counter_text || '');
   const [textSize, setTextSize] = useState<CustomTextSize>((counter as ExtendedCounter).customTextSize || 'md');
   const [textColor, setTextColor] = useState<CustomTextColor>((counter as ExtendedCounter).customTextColor || 'white');
   const [textWeight, setTextWeight] = useState<'regular' | 'bold'>((counter as ExtendedCounter).customTextWeight || 'regular');
@@ -102,12 +102,12 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
 
   useEffect(() => {
     const extendedCounter = counter as ExtendedCounter;
-    setTextValue(extendedCounter.customText || '');
+    setTextValue(extendedCounter.customText ?? extendedCounter.counter_text ?? '');
     setTextSize(extendedCounter.customTextSize || 'md');
     setTextColor(extendedCounter.customTextColor || 'white');
     setTextWeight(extendedCounter.customTextWeight || 'regular');
     setTextGlow(extendedCounter.customTextGlow ?? false);
-    setImagePreview(extendedCounter.customImage || null);
+    setImagePreview(extendedCounter.customImage || extendedCounter.image_url || null);
   }, [counter]);
 
   useEffect(() => {
@@ -119,9 +119,43 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     if (storedImage && !imagePreview && !extendedCounter.customImage) {
       console.log('🔄 Loading image from localStorage storage helper in customization');
       setImagePreview(storedImage);
-      onUpdate({ customImage: storedImage } as Partial<ExtendedCounter>);
+      onUpdate({ customImage: storedImage, image_url: undefined } as Partial<ExtendedCounter>);
     }
   }, [counter, imagePreview, onUpdate]);
+
+  const textPersistTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const persistCounterText = useCallback(async (text: string | null) => {
+    try {
+      const response = await fetch(`/api/counters/${counter.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ counter_text: text ?? null })
+      });
+      if (!response.ok) {
+        console.warn('⚠️ Failed to persist counter text to server. Status:', response.status);
+      }
+    } catch (error) {
+      console.warn('⚠️ Error persisting counter text to server:', error);
+    }
+  }, [counter.id]);
+
+  const schedulePersistCounterText = useCallback((text: string | null) => {
+    if (textPersistTimeout.current) {
+      clearTimeout(textPersistTimeout.current);
+    }
+    textPersistTimeout.current = setTimeout(() => {
+      void persistCounterText(text);
+    }, 600);
+  }, [persistCounterText]);
+
+  useEffect(() => {
+    return () => {
+      if (textPersistTimeout.current) {
+        clearTimeout(textPersistTimeout.current);
+      }
+    };
+  }, []);
 
   const compressImageLossless = async (file: File): Promise<string> => {
     if (typeof window === 'undefined') {
@@ -261,11 +295,14 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     setTextValue(newText);
     onUpdate({
       customText: newText,
+      counter_text: newText,
       customTextSize: textSize,
       customTextColor: textColor,
       customTextWeight: textWeight,
       customTextGlow: textGlow
     } as Partial<ExtendedCounter>);
+
+    schedulePersistCounterText(newText || null);
 
     const savedTexts = safeGetItem('counterCustomTexts');
     savedTexts[counter.id] = newText;
@@ -292,6 +329,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     setTextSize(newSize);
     onUpdate({
       customText: textValue,
+      counter_text: textValue,
       customTextSize: newSize,
       customTextColor: textColor,
       customTextWeight: textWeight,
@@ -307,6 +345,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     setTextColor(newColor);
     onUpdate({
       customText: textValue,
+      counter_text: textValue,
       customTextSize: textSize,
       customTextColor: newColor,
       customTextWeight: textWeight,
@@ -325,11 +364,14 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     setTextGlow(false);
     onUpdate({
       customText: undefined,
+      counter_text: null,
       customTextSize: 'md',
       customTextColor: 'white',
       customTextWeight: 'regular',
       customTextGlow: false
     } as Partial<ExtendedCounter>);
+
+    schedulePersistCounterText(null);
 
     const savedTexts = safeGetItem('counterCustomTexts');
     delete savedTexts[counter.id];

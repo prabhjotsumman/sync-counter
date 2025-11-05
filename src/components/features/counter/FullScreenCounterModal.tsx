@@ -132,6 +132,8 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     }
     if (updates.customText !== undefined) {
       setCustomText(updates.customText || '');
+    } else if (updates.counter_text !== undefined) {
+      setCustomText(updates.counter_text || '');
     }
     if (updates.customTextSize !== undefined) {
       setCustomTextSize(updates.customTextSize || 'md');
@@ -340,7 +342,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     // Load saved text
     const savedTexts = safeGetItem('counterCustomTexts');
     const savedText = savedTexts[counter.id];
-    setCustomText(savedText || extendedCounter.customText || '');
+    setCustomText(savedText || extendedCounter.customText || extendedCounter.counter_text || '');
 
     // Load saved text size
     const savedTextSizes = safeGetItem('counterCustomTextSizes');
@@ -367,10 +369,12 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
   if (!show || !counter) return null;
 
   const baseCounter = counter as ExtendedCounter;
+  const effectiveCustomText = customText || baseCounter.customText || baseCounter.counter_text || '';
   const counterWithLocalCustomizations: ExtendedCounter = {
     ...baseCounter,
     customImage: customImage ?? baseCounter.customImage ?? baseCounter.image_url ?? undefined,
-    customText: customText || baseCounter.customText,
+    customText: effectiveCustomText,
+    counter_text: effectiveCustomText || null,
     customTextSize: customTextSize || baseCounter.customTextSize,
     customTextColor: customTextColor || baseCounter.customTextColor,
     customTextWeight: customTextWeight || baseCounter.customTextWeight,

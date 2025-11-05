@@ -28,6 +28,7 @@ export interface CounterData {
     history?: Counter['history'];
     users?: Record<string, number>;
     image_url?: string | null;
+    counter_text?: string | null;
 }
 
 
@@ -406,9 +407,13 @@ export function useCountersPageLogic() {
     const handleCounterUpdate = (id: string, updatedCounter: Counter) => {
         const resetCounter = resetDailyCountsForCounters([updatedCounter])[0];
         setCounters(prev =>
-            prev.map(counter =>
-                counter.id === id ? resetCounter : counter
-            )
+            prev.map(counter => {
+                if (counter.id !== id) return counter;
+                return {
+                    ...resetCounter,
+                    counter_text: (resetCounter as CounterData).counter_text ?? (updatedCounter as CounterData).counter_text ?? null
+                };
+            })
         );
     };
 
