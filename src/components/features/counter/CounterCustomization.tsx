@@ -481,14 +481,14 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
           style={{ maxHeight: '88vh', overflowY: 'auto' }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <h3 className="text-lg sm:text-xl font-semibold text-white text-center sm:text-left">Customize Text</h3>
+          <div className="mb-4 sm:mb-6 flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-lg sm:text-xl font-semibold text-white">Customize Text</h3>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setShowCustomization(false);
               }}
-              className="self-center sm:self-auto text-gray-200 hover:text-white transition-all p-1.5 rounded-full border border-gray-400/60 bg-gray-700/70 hover:bg-gray-600/90 shadow-[0_10px_25px_rgba(0,0,0,0.35)]"
+              className="text-gray-200 hover:text-white transition-all p-1.5 rounded-full border border-gray-400/60 bg-gray-700/70 hover:bg-gray-600/90 shadow-[0_10px_25px_rgba(0,0,0,0.35)]"
               title="Close"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -641,7 +641,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
                 placeholder="Add your text..."
                 rows={Math.min(10, Math.max(4, Math.ceil(textValue.length / 60) + 2))}
               />
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap gap-2">
                   {textValue && (
                     <button
@@ -655,7 +655,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
                     </button>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2 justify-end">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

@@ -396,7 +396,6 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
         minHeight: '100vh',
         minWidth: '100vw',
         touchAction: 'manipulation',
-        paddingTop: showProgressBar ? '3.5rem' : undefined
       }}
       onClick={onClick}
     >
@@ -437,7 +436,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
                     />
                     {/* Remove button for full screen image */}
                     <div
-                      className={`absolute top-2 right-2 md:top-4 md:right-4 transition-opacity duration-300 ${
+                      className={`absolute top-6 right-2 md:top-4 md:right-4 transition-opacity duration-300 ${
                         controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
                       }`}
                     >
