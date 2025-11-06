@@ -474,24 +474,21 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
       {showCustomization && (
         <div
           ref={panelRef}
-          className="fixed md:absolute bg-gray-800 rounded-2xl p-4 md:p-6 shadow-xl border border-gray-600 z-[60]
-                     w-[min(92vw,24rem)] max-w-md
-                     top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2
-                     md:w-auto md:max-w-md md:top-0 md:bottom-auto md:left-auto md:right-2 md:transform-none"
-          style={{
-            maxHeight: '85vh',
-            overflowY: 'auto'
-          }}
+          className="fixed z-[60] bg-gray-800 border border-gray-600 rounded-2xl shadow-xl p-4 sm:p-6
+                     w-[min(92vw,28rem)] sm:w-[min(90vw,32rem)] lg:w-[34rem]
+                     top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                     md:top-auto md:left-auto md:right-8 md:bottom-8 md:translate-x-0 md:translate-y-0"
+          style={{ maxHeight: '88vh', overflowY: 'auto' }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="relative mb-4 md:mb-6">
-            <h3 className="text-lg md:text-xl font-semibold text-white text-center">Customize Text</h3>
+          <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h3 className="text-lg sm:text-xl font-semibold text-white text-center sm:text-left">Customize Text</h3>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setShowCustomization(false);
               }}
-              className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-200 hover:text-white transition-all p-1.5 rounded-full border border-gray-400/60 bg-gray-700/70 hover:bg-gray-600/90 shadow-[0_10px_25px_rgba(0,0,0,0.35)]"
+              className="self-center sm:self-auto text-gray-200 hover:text-white transition-all p-1.5 rounded-full border border-gray-400/60 bg-gray-700/70 hover:bg-gray-600/90 shadow-[0_10px_25px_rgba(0,0,0,0.35)]"
               title="Close"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -501,7 +498,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
           </div>
 
           <div className="space-y-5">
-            <div className="flex flex-wrap items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
               {TEXT_SIZE_OPTIONS.map(({ size, label, previewClass }) => (
                 <button
                   key={size}
@@ -522,7 +519,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
               {TEXT_COLOR_OPTIONS.map(({ key, color, label }) => (
                 <button
                   key={key}
@@ -540,7 +537,7 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -640,42 +637,35 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
                   e.stopPropagation();
                   handleTextChange(e.target.value);
                 }}
-                placeholder="Enter custom text..."
-                className={`w-full px-4 py-3 bg-gray-700/80 border border-gray-600/80 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-white`}
-                style={{
-                  minHeight: '112px',
-                  fontSize:
-                    textSize === 'xs' ? '0.85rem' :
-                    textSize === 'sm' ? '0.95rem' :
-                    textSize === 'md' ? '1.05rem' :
-                    textSize === 'lg' ? '1.15rem' :
-                    textSize === 'xl' ? '1.25rem' : '1.35rem',
-                  lineHeight: 1.5,
-                  color: TEXT_COLOR_HEX[textColor]
-                }}
+                className="w-full min-h-[8rem] md:min-h-[10rem] bg-gray-900/80 border border-gray-700 rounded-xl px-3 md:px-4 py-3 text-sm md:text-base text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500/70 shadow-inner resize-y md:resize-none"
+                placeholder="Add your text..."
                 rows={Math.min(10, Math.max(4, Math.ceil(textValue.length / 60) + 2))}
               />
-              <div className="flex flex-row flex-wrap items-center justify-end gap-2">
-                {textValue && (
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div className="flex flex-wrap gap-2">
+                  {textValue && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClearText();
+                      }}
+                      className="inline-flex items-center justify-center rounded-xl border border-red-400/70 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 hover:bg-red-500/20 hover:border-red-300 transition-colors"
+                    >
+                      Clear Text
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 justify-end">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleClearText();
+                      setShowCustomization(false);
                     }}
-                    className="inline-flex items-center justify-center rounded-xl border border-red-400/70 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 hover:bg-red-500/20 hover:border-red-300 transition-colors"
+                    className="inline-flex items-center justify-center rounded-xl border border-gray-500/70 bg-gray-700/40 px-4 py-2 text-sm font-medium text-gray-200 hover:bg-gray-600/50 hover:border-gray-400 transition-colors"
                   >
-                    Clear Text
+                    Close
                   </button>
-                )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowCustomization(false);
-                  }}
-                  className="inline-flex items-center justify-center rounded-xl border border-gray-500/70 bg-gray-700/40 px-4 py-2 text-sm font-medium text-gray-200 hover:bg-gray-600/50 hover:border-gray-400 transition-colors"
-                >
-                  Close
-                </button>
+                </div>
               </div>
             </div>
 

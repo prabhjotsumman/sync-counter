@@ -387,16 +387,23 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     addBubble();
   };
 
+  const showProgressBar = typeof counter.dailyGoal === 'number' && counter.dailyGoal > 0;
+
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col bg-black text-white items-center justify-center"
-      style={{ minHeight: '100vh', minWidth: '100vw', touchAction: 'manipulation' }}
+      style={{
+        minHeight: '100vh',
+        minWidth: '100vw',
+        touchAction: 'manipulation',
+        paddingTop: showProgressBar ? '3.5rem' : undefined
+      }}
       onClick={onClick}
     >
       {/* Progress bar in top-right corner (absolute) */}
-      {typeof counter.dailyGoal === 'number' && counter.dailyGoal > 0 && (
-        <div className="absolute top-2 md:top-0 right-2 md:right-0 w-full max-w-full z-10">
-          <ProgressBar counterName={counter.name} value={counter.dailyCount || 0} max={counter.dailyGoal} history={counter.history} />
+      {showProgressBar && (
+        <div className="fixed inset-x-0 top-0 z-[70]">
+          <ProgressBar counterName={counter.name} value={counter.dailyCount || 0} max={Number(counter.dailyGoal)} history={counter.history} />
         </div>
       )}
 
@@ -405,11 +412,11 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
         {/* Custom content above value - Flexible layout */}
         {(customImage || customText) && (
           <div
-            className="flex flex-col w-full max-w-6xl px-4 mb-2 md:mb-4"
+            className="flex flex-col w-full h-full max-w-full"
             data-separator-container
             style={{
-              height: customImage && customText ? 'calc(100vh - 4rem)' : 'calc(100vh - 6rem)',
-              maxHeight: customImage && customText ? '88vh' : '82vh'
+              height: customImage && customText ? 'calc(100vh - 4rem)' : 'calc(100vh - 4rem)',
+              maxHeight: customImage && customText ? '90vh' : '88vh'
             }}
           >
             {customImage && customText ? (
@@ -420,7 +427,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
                   className="flex-shrink-0 flex items-center justify-center overflow-hidden w-full"
                   style={{ height: `${separatorPosition}%` }}
                 >
-                  <div className="relative w-full h-full max-w-full">
+                  <div className="relative w-full h-full">
                     <Image
                       src={customImage}
                       alt="Custom counter image"
@@ -475,10 +482,10 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
                   className="flex-1 flex items-center justify-center overflow-hidden min-h-0"
                   style={{ height: `${100 - separatorPosition}%` }}
                 >
-                  <div className="w-full max-w-full h-full flex items-center justify-center">
-                    <div className="max-h-full overflow-y-auto px-3 py-5 pb-8 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="max-h-full w-full overflow-y-auto py-4 md:py-5 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
                       <p
-                        className={`text-center drop-shadow-lg leading-relaxed whitespace-pre-wrap break-words ${textDisplayClass}`}
+                        className={`text-center drop-shadow-lg leading-relaxed whitespace-pre-wrap break-words px-4 md:px-6 ${textDisplayClass}`}
                         style={{
                           ...textStyle
                         }}
@@ -491,11 +498,10 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
               </>
             ) : (
               // Only image or only text - simple layout
-              <div className="flex items-center justify-center h-full">
+              <div className="flex items-center justify-center h-full w-full">
                 {customImage && (
                   <div
-                    className="relative w-full"
-                    style={{ width: 'min(88vw, 52rem)', height: 'min(68vh, 36rem)' }}
+                    className="relative w-full h-full"
                   >
                     <Image
                       src={customImage}
@@ -529,9 +535,9 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
                 )}
 
                 {customText && (
-                  <div className="max-h-[75vh] overflow-y-auto px-3 py-5 pb-10 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                  <div className="max-h-[82vh] w-full overflow-y-auto py-4 md:py-6 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
                     <p
-                      className={`text-center drop-shadow-lg max-w-[82vw] md:max-w-3xl break-words leading-relaxed whitespace-pre-wrap ${textDisplayClass}`}
+                      className={`text-center drop-shadow-lg w-full break-words leading-relaxed whitespace-pre-wrap px-4 md:px-6 ${textDisplayClass}`}
                       style={textStyle}
                     >
                       {customText}
