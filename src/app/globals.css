@@ -57,10 +57,48 @@ body {
 }
 
 /* Floating bubble animation for the fullscreen increment effect */
-@keyframes ekonkar-bubble-float {
-  0% { transform: translate(-50%, 0) scale(0.9); opacity: 1; }
-  70% { opacity: 0.8; }
-  100% { transform: translate(-50%, -140px) scale(1.05); opacity: 0; }
+@keyframes ekonkar-bubble-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(calc(var(--bubble-scale, 1) * 0.8));
+    box-shadow: 0 0 10px rgba(250, 204, 21, 0.2);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% - 32px)) scale(calc(var(--bubble-scale, 1) * 0.95));
+    box-shadow: 0 0 16px rgba(250, 204, 21, 0.35);
+  }
+  65% {
+    opacity: 0.9;
+    transform: translate(-50%, calc(-50% - 96px)) scale(calc(var(--bubble-scale, 1) * 1.05));
+    box-shadow: 0 0 22px rgba(250, 204, 21, 0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 168px)) scale(calc(var(--bubble-scale, 1) * 1.12));
+    box-shadow: 0 0 26px rgba(250, 204, 21, 0);
+  }
+}
+
+.ekonkar-bubble {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.6rem, 1.6vw, 1rem);
+  border-radius: 9999px;
+  color: #facc15;
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  box-shadow: 0 0 28px rgba(250, 204, 21, 0.35);
+  background: transparent;
+  animation-name: ekonkar-bubble-pop;
+  animation-duration: var(--bubble-duration, 1600ms);
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  will-change: transform, opacity;
 }
 
 /* Custom scrollbar styling for scrollable text areas */

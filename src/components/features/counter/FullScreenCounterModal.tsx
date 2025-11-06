@@ -8,7 +8,14 @@ import { useCounterLogic } from '@/hooks/useCounterLogic';
 import type { Counter } from '@/lib/counters';
 import { loadCustomImage, saveCustomImage, clearCustomImage } from '@/lib/customImageStorage';
 
-type Bubble = { id: number; createdAt: number };
+type Bubble = {
+  id: number;
+  createdAt: number;
+  duration: number;
+  top: string;
+  left: string;
+  scale: number;
+};
 
 interface FullScreenCounterModalProps {
   id: string;
@@ -307,14 +314,41 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
   // Bubble state (unconditional hook usage to keep hook order stable)
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const bubbleId = useRef(0);
-  const bubbleLifespan = 950; // ms (slightly longer than CSS animation)
+  const bubbleContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const addBubble = useCallback(() => {
+  const addBubble = useCallback((input?: { clientX: number; clientY: number }) => {
+    const container = bubbleContainerRef.current;
+    let top = '50%';
+    let left = '50%';
+
+    if (container && input) {
+      const rect = container.getBoundingClientRect();
+      const clampedX = Math.min(Math.max(input.clientX, rect.left), rect.right);
+      const clampedY = Math.min(Math.max(input.clientY, rect.top), rect.bottom);
+      left = `${clampedX - rect.left}px`;
+      top = `${clampedY - rect.top}px`;
+    }
+
+    const duration = 1600 + Math.random() * 600; // 1600ms - 2200ms
+    const scale = 0.95 + Math.random() * 0.3; // 0.95 - 1.25
+
     const newId = ++bubbleId.current;
-    setBubbles(prev => [...prev, { id: newId, createdAt: Date.now() }]);
-    setTimeout(() => {
-      setBubbles(prev => prev.filter(b => b.id !== newId));
-    }, bubbleLifespan);
+    const bubble: Bubble = {
+      id: newId,
+      createdAt: Date.now(),
+      duration,
+      top,
+      left,
+      scale
+    };
+
+    setBubbles(prev => [...prev, bubble]);
+
+    if (typeof window !== 'undefined') {
+      window.setTimeout(() => {
+        setBubbles(prev => prev.filter(b => b.id !== newId));
+      }, duration + 200);
+    }
   }, []);
 
   const { handleIncrement } = useCounterLogic({
@@ -381,10 +415,10 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     customTextGlow: typeof customTextGlow === 'boolean' ? customTextGlow : baseCounter.customTextGlow,
   };
 
-  const onClick = () => {
+  const onClick = (event: React.MouseEvent<HTMLDivElement>) => {
     console.log('🖱️ Modal onClick triggered - incrementing counter');
     handleIncrement();
-    addBubble();
+    addBubble(event.nativeEvent);
   };
 
   const showProgressBar = typeof counter.dailyGoal === 'number' && counter.dailyGoal > 0;
@@ -549,17 +583,29 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
         )}
 
         {/* Bubbles overlay above the value */}
-        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
-          {bubbles.map(b => (
-            <span
-              key={b.id}
-              className="ekonkar-bubble spiritual-glow text-yellow-400 text-4xl md:text-6xl select-none"
-              style={{ top: '40%' }}
-              aria-hidden
-            >
-              ੴ
-            </span>
-          ))}
+        <div
+          ref={bubbleContainerRef}
+          className="pointer-events-none absolute inset-0 z-50"
+        >
+          {bubbles.map(bubble => {
+            const bubbleStyle = {
+              top: bubble.top,
+              left: bubble.left,
+              '--bubble-duration': `${bubble.duration}ms`,
+              '--bubble-scale': bubble.scale
+            } as React.CSSProperties & Record<string, string | number>;
+
+            return (
+              <span
+                key={bubble.id}
+                className="ekonkar-bubble spiritual-glow text-3xl md:text-5xl select-none"
+                style={bubbleStyle}
+                aria-hidden
+              >
+                ੴ
+              </span>
+            );
+          })}
         </div>
         {/* Main counter value */}
         <span className="text-5xl md:text-[6rem] font-extrabold text-white drop-shadow-lg select-none mt-6 md:mt-8" style={{ letterSpacing: '0.05em' }}>{counter.value}</span>
