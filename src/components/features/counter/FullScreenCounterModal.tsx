@@ -123,9 +123,13 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     scheduleHideControls();
   }, [scheduleHideControls, clearHideControlsTimeout, customizationOpen]);
 
-  const handleCustomizationUpdate = (updates: Partial<ExtendedCounter>) => {
+  const handleCustomizationUpdate = useCallback((updates: Partial<ExtendedCounter>) => {
+    if (!counter) return;
+
     const current = counter as ExtendedCounter;
     const updatedCounter: ExtendedCounter = { ...current, ...updates };
+
+    const existingImage = customImage ?? current.customImage ?? current.image_url ?? null;
 
     if ('customImage' in updates) {
       if (updates.customImage) {
@@ -134,6 +138,8 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
         delete updatedCounter.customImage;
         updatedCounter.image_url = null;
       }
+    } else if (existingImage) {
+      updatedCounter.customImage = existingImage;
     }
 
     if ('image_url' in updates) {
@@ -185,7 +191,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     if (updates.customTextGlow !== undefined) {
       setCustomTextGlow(!!updates.customTextGlow);
     }
-  };
+  }, [counter, customImage, handleCounterUpdate, id]);
 
   const removeFullscreenImage = useCallback(async () => {
     const targetId = counter?.id ?? id;
@@ -467,6 +473,83 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     customTextGlow: typeof customTextGlow === 'boolean' ? customTextGlow : baseCounter.customTextGlow,
   };
 
+  const hasCustomImage = Boolean(customImage);
+  const hasCustomText = Boolean(customText);
+  const hasBothCustomContent = hasCustomImage && hasCustomText;
+  const topSectionHeight = separatorPosition;
+  const bottomSectionHeight = 100 - separatorPosition;
+  const showCounterBelowSeparator = (hasCustomImage || hasCustomText) && !hasBothCustomContent;
+  const showCounterInMainArea = !hasCustomImage && !hasCustomText;
+  const showCounterAtBottom = showCounterInMainArea || hasBothCustomContent;
+
+  const renderImageContent = () => {
+    if (!customImage) {
+      return <div className="w-full h-full" />;
+    }
+
+    return (
+      <div className="relative w-full h-full flex items-center justify-center">
+        <Image
+          src={customImage}
+          alt="Custom counter image"
+          fill
+          sizes="(min-width: 1024px) 48rem, 85vw"
+          className="object-contain rounded-lg shadow-2xl"
+        />
+        <div
+          className={`absolute top-2 right-2 md:top-4 md:right-4 transition-opacity duration-300 ${
+            controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('🗑️ Remove full screen image button clicked');
+              removeFullscreenImage();
+            }}
+            className="bg-black bg-opacity-20 hover:bg-opacity-30 active:bg-opacity-40 text-white rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center text-sm font-bold border border-gray-400 hover:border-gray-300 transition-all duration-200 backdrop-blur-sm"
+            style={{ zIndex: 100 }}
+            title="Remove image"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="md:w-7 md:h-7">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCounterValue = ({ className = '', includeDefaultMargin = true }: { className?: string; includeDefaultMargin?: boolean } = {}) => (
+    <span
+      className={`text-5xl md:text-[6rem] font-extrabold text-white drop-shadow-lg select-none ${
+        includeDefaultMargin ? 'mt-6 md:mt-8' : ''
+      } ${className}`.trim()}
+      style={{ letterSpacing: '0.05em' }}
+    >
+      {counter.value}
+    </span>
+  );
+
+  const renderTextContent = () => {
+    if (!hasCustomText) {
+      return <div className="w-full h-full" />;
+    }
+
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="max-h-full w-full overflow-y-auto py-4 md:py-6 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+          <p
+            className={`text-center drop-shadow-lg w-full break-words leading-relaxed whitespace-pre-wrap px-4 md:px-6 ${textDisplayClass}`}
+            style={textStyle}
+          >
+            {customText}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   const onClick = (event: React.MouseEvent<HTMLDivElement>) => {
     console.log('🖱️ Modal onClick triggered - incrementing counter');
     handleIncrement();
@@ -493,144 +576,43 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
       )}
 
       {/* Center value and bubble overlay */}
-      <div className="relative flex-1 flex flex-col items-center justify-center w-full min-h-0">
+      <div className="relative flex-1 flex flex-col items-center justify-center w-full min-h-0 gap-6">
         {/* Custom content above value - Flexible layout */}
-        {(customImage || customText) && (
+        {(hasCustomImage || hasCustomText) && (
           <div
-            className="flex flex-col w-full h-full max-w-full"
+            className="flex flex-col w-full max-w-full h-full"
             data-separator-container
-            style={{
-              height: customImage && customText ? 'calc(100vh - 4rem)' : 'calc(100vh - 4rem)',
-              maxHeight: customImage && customText ? '90vh' : '88vh'
-            }}
+            style={{ height: 'calc(100vh - 4rem)', maxHeight: '90vh' }}
           >
-            {customImage && customText ? (
-              // Both image and text present - show separator
-              <>
-                {/* Image section */}
-                <div
-                  className="flex-shrink-0 flex items-center justify-center overflow-hidden w-full"
-                  style={{ height: `${separatorPosition}%` }}
-                >
-                  <div className="relative w-full h-full">
-                    <Image
-                      src={customImage}
-                      alt="Custom counter image"
-                      fill
-                      sizes="(min-width: 1024px) 60vw, 90vw"
-                      className="object-contain rounded-lg shadow-2xl"
-                    />
-                    {/* Remove button for full screen image */}
-                    <div
-                      className={`absolute top-6 right-2 md:top-4 md:right-4 transition-opacity duration-300 ${
-                        controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                      }`}
-                    >
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('🗑️ Remove full screen image button clicked');
-                          removeFullscreenImage();
-                        }}
-                        className="bg-black bg-opacity-20 hover:bg-opacity-30 active:bg-opacity-40 text-white rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center text-sm font-bold border border-gray-400 hover:border-gray-300 transition-all duration-200 backdrop-blur-sm"
-                        style={{ zIndex: 100 }}
-                        title="Remove image"
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="md:w-7 md:h-7">
-                          <path d="M18 6L6 18M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+            <div
+              className="flex-shrink-0 flex items-center justify-center overflow-hidden w-full"
+              style={{ height: `${topSectionHeight}%` }}
+            >
+              {hasCustomImage ? renderImageContent() : renderTextContent()}
+            </div>
 
-                {/* Draggable separator */}
-                <div
-                  className={`relative flex items-center justify-center py-3 cursor-row-resize select-none transition-colors touch-none ${
-                    isDragging ? 'bg-blue-500 bg-opacity-50' : 'hover:bg-gray-700 hover:bg-opacity-30'
-                  }`}
-                  onMouseDown={handleSeparatorMouseDown}
-                  onTouchStart={handleSeparatorTouchStart}
-                  style={{ height: '12px' }}
-                >
-                  <div className="w-16 h-1.5 bg-gray-400 rounded-full opacity-70 hover:opacity-100 transition-opacity shadow-sm"></div>
-                  {/* Subtle grip lines */}
-                  <div className="absolute flex space-x-1">
-                    <div className="w-0.5 h-3 bg-gray-500 opacity-60 rounded-full"></div>
-                    <div className="w-0.5 h-3 bg-gray-500 opacity-60 rounded-full"></div>
-                    <div className="w-0.5 h-3 bg-gray-500 opacity-60 rounded-full"></div>
-                  </div>
-                </div>
-
-                {/* Text section */}
-                <div
-                  className="flex-1 flex items-center justify-center overflow-hidden min-h-0"
-                  style={{ height: `${100 - separatorPosition}%` }}
-                >
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="max-h-full w-full overflow-y-auto py-4 md:py-5 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
-                      <p
-                        className={`text-center drop-shadow-lg leading-relaxed whitespace-pre-wrap break-words px-4 md:px-6 ${textDisplayClass}`}
-                        style={{
-                          ...textStyle
-                        }}
-                      >
-                        {customText}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              // Only image or only text - simple layout
-              <div className="flex items-center justify-center h-full w-full">
-                {customImage && (
-                  <div
-                    className="relative w-full h-full"
-                  >
-                    <Image
-                      src={customImage}
-                      alt="Custom counter image"
-                      fill
-                      sizes="(min-width: 1024px) 48rem, 85vw"
-                      className="object-contain rounded-lg shadow-2xl"
-                    />
-                    {/* Remove button for full screen image */}
-                    <div
-                      className={`absolute top-2 right-2 md:top-4 md:right-4 transition-opacity duration-300 ${
-                        controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                      }`}
-                    >
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('🗑️ Remove full screen image button clicked');
-                          removeFullscreenImage();
-                        }}
-                        className="bg-black bg-opacity-20 hover:bg-opacity-30 active:bg-opacity-40 text-white rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center text-sm font-bold border border-gray-400 hover:border-gray-300 transition-all duration-200 backdrop-blur-sm"
-                        style={{ zIndex: 100 }}
-                        title="Remove image"
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="md:w-7 md:h-7">
-                          <path d="M18 6L6 18M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {customText && (
-                  <div className="max-h-[82vh] w-full overflow-y-auto py-4 md:py-6 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
-                    <p
-                      className={`text-center drop-shadow-lg w-full break-words leading-relaxed whitespace-pre-wrap px-4 md:px-6 ${textDisplayClass}`}
-                      style={textStyle}
-                    >
-                      {customText}
-                    </p>
-                  </div>
-                )}
+            <div
+              className={`relative flex items-center justify-center py-3 cursor-row-resize select-none transition-colors touch-none ${
+                isDragging ? 'bg-blue-500 bg-opacity-50' : 'hover:bg-gray-700 hover:bg-opacity-30'
+              }`}
+              onMouseDown={handleSeparatorMouseDown}
+              onTouchStart={handleSeparatorTouchStart}
+              style={{ height: '12px' }}
+            >
+              <div className="w-16 h-1.5 bg-gray-400 rounded-full opacity-70 hover:opacity-100 transition-opacity shadow-sm" />
+              <div className="absolute flex space-x-1">
+                <div className="w-0.5 h-3 bg-gray-500 opacity-60 rounded-full" />
+                <div className="w-0.5 h-3 bg-gray-500 opacity-60 rounded-full" />
+                <div className="w-0.5 h-3 bg-gray-500 opacity-60 rounded-full" />
               </div>
-            )}
+            </div>
+
+            <div
+              className="flex-1 flex items-center justify-center overflow-hidden min-h-0 w-full"
+              style={{ height: `${bottomSectionHeight}%` }}
+            >
+              {hasBothCustomContent ? renderTextContent() : showCounterBelowSeparator ? renderCounterValue({ includeDefaultMargin: false }) : <div className="w-full h-full" />}
+            </div>
           </div>
         )}
 
@@ -660,7 +642,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
           })}
         </div>
         {/* Main counter value */}
-        <span className="text-5xl md:text-[6rem] font-extrabold text-white drop-shadow-lg select-none mt-6 md:mt-8" style={{ letterSpacing: '0.05em' }}>{counter.value}</span>
+        {showCounterAtBottom && renderCounterValue()}
       </div>
 
       {/* All buttons in single column - bottom right */}
