@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getNextCalgaryMidnightUTC } from '@/utils';
 
 /**
  * Circular countdown timer component that shows time remaining until daily reset
@@ -7,28 +8,8 @@ interface CountdownTimerProps {
   className?: string;
   size?: number;
   strokeWidth?: number;
+  onCountdownChange?: (payload: { remainingMs: number; isComplete: boolean; nextReset: Date }) => void;
 }
-
-/**
- * Gets the next reset time (19:20 UTC)
- */
-const getNextResetTime = (): Date => {
-  const now = new Date();
-  const resetHour = 19; // 19:20 UTC (7:20 PM UTC)
-
-  // If it's already past 19:20 UTC today, get tomorrow's reset time
-  if (now.getUTCHours() >= resetHour) {
-    const tomorrow = new Date(now);
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-    tomorrow.setUTCHours(resetHour, 20, 0, 0);
-    return tomorrow;
-  }
-
-  // Otherwise, get today's reset time
-  const today = new Date(now);
-  today.setUTCHours(resetHour, 20, 0, 0);
-  return today;
-};
 
 /**
  * Formats time remaining as HH:MM:SS
@@ -71,10 +52,11 @@ const EkOnkarSymbol: React.FC<{ size?: number; color?: string }> = ({
 export const CountdownTimer: React.FC<CountdownTimerProps> = ({
   className = '',
   size = 60,
-  strokeWidth = 4
+  strokeWidth = 4,
+  onCountdownChange
 }) => {
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
-  const [nextReset, setNextReset] = useState<Date>(getNextResetTime());
+  const [nextReset, setNextReset] = useState<Date>(getNextCalgaryMidnightUTC());
 
   useEffect(() => {
     const updateTimer = () => {
@@ -83,11 +65,14 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({
 
       if (remaining <= 0) {
         // Reset has occurred, calculate next reset time
-        const newNextReset = getNextResetTime();
+        const newNextReset = getNextCalgaryMidnightUTC();
         setNextReset(newNextReset);
-        setTimeRemaining(newNextReset.getTime() - now.getTime());
+        const freshRemaining = newNextReset.getTime() - now.getTime();
+        setTimeRemaining(freshRemaining);
+        onCountdownChange?.({ remainingMs: freshRemaining, isComplete: true, nextReset: newNextReset });
       } else {
         setTimeRemaining(remaining);
+        onCountdownChange?.({ remainingMs: remaining, isComplete: false, nextReset });
       }
     };
 

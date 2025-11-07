@@ -16,7 +16,7 @@ import {
     resetDailyCountsForCounters
 } from '@/lib/offlineCounterOps';
 import { syncPendingIncrements, setGlobalCounterUpdateCallback, normalizeUserName } from '@/lib/offlineUtils';
-import { setUserColor, getUserColor, USER_COLOR_OPTIONS, removeUserColor, getTodayString, getTodayWeekdayUTC } from '@/utils';
+import { setUserColor, getUserColor, USER_COLOR_OPTIONS, removeUserColor, getTodayString, getTodayWeekdayUTC, getNextCalgaryMidnightUTC } from '@/utils';
 import { broadcastUpdate } from '@/app/api/sync/broadcast';
 
 export interface CounterData {
@@ -589,132 +589,67 @@ export function useCountersPageLogic() {
 
     // Daily reset detection and trigger
     useEffect(() => {
-        console.log('🕐 Setting up daily reset detection...');
+        console.log('🕐 Setting up Calgary-based daily reset detection...');
 
         let resetTimeout: NodeJS.Timeout | null = null;
-        let nextResetTime: Date;
-
-        const checkAndScheduleReset = () => {
-            const now = new Date();
-            const resetHour = 19; // 19:20 UTC
-            const resetMinute = 20;
-
-            // If it's past 19:20 UTC today, schedule reset for 19:20 UTC tomorrow
-            if (now.getUTCHours() > resetHour || (now.getUTCHours() === resetHour && now.getUTCMinutes() >= resetMinute)) {
-                const tomorrow = new Date(now);
-                tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-                tomorrow.setUTCHours(resetHour, resetMinute, 0, 0);
-                nextResetTime = tomorrow;
-                const timeUntilReset = tomorrow.getTime() - now.getTime();
-
-                console.log('📅 Daily reset scheduled for tomorrow at 19:20 UTC');
-                console.log('⏰ Time until reset:', Math.round(timeUntilReset / 1000 / 60), 'minutes');
-
-                resetTimeout = setTimeout(() => {
-                    console.log('🔄 Daily reset triggered! Resetting all counters...');
-                    triggerDailyReset();
-                }, timeUntilReset);
-            } else {
-                // Schedule reset for today at 19:20 UTC
-                const today = new Date(now);
-                today.setUTCHours(resetHour, resetMinute, 0, 0);
-                nextResetTime = today;
-                const timeUntilReset = today.getTime() - now.getTime();
-
-                console.log('📅 Daily reset scheduled for today at 19:20 UTC');
-                console.log('⏰ Time until reset:', Math.round(timeUntilReset / 1000 / 60), 'minutes');
-
-                resetTimeout = setTimeout(() => {
-                    console.log('🔄 Daily reset triggered! Resetting all counters...');
-                    triggerDailyReset();
-                }, timeUntilReset);
-            }
-        };
+        let lastResetTimestamp = 0;
 
         const triggerDailyReset = () => {
-            console.log('🔄 Triggering daily reset for all counters...');
+            console.log('🔄 Triggering daily reset for all counters (Calgary midnight)...');
             setCounters(prev => {
                 const resetCounters = resetDailyCountsForCounters(prev);
                 console.log('✅ Daily reset completed for', resetCounters.length, 'counters');
 
-                // Update offline storage
                 saveOfflineCounters(resetCounters);
-
-                // Force re-render by updating with a new array reference
-                console.log('🔄 Forcing state update with reset counters...');
                 return [...resetCounters];
             });
         };
 
-        // Check immediately and schedule reset
-        checkAndScheduleReset();
-
-        // More frequent checks every minute for the first 3 hours to ensure we don't miss the reset
-        let minuteCheckInterval: NodeJS.Timeout | null = null;
-        const now = new Date();
-        const resetHour = 19;
-        const resetMinute = 20;
-
-        if (now.getUTCHours() < resetHour || (now.getUTCHours() === resetHour && now.getUTCMinutes() < resetMinute)) {
-            const today = new Date(now);
-            today.setUTCHours(resetHour, resetMinute, 0, 0);
-            const timeUntilReset = today.getTime() - now.getTime();
-
-            if (timeUntilReset < 3 * 60 * 60 * 1000) { // If reset is within 3 hours
-                minuteCheckInterval = setInterval(() => {
-                    const currentNow = new Date();
-                    if (currentNow.getUTCHours() >= resetHour && currentNow.getUTCMinutes() >= resetMinute) {
-                        console.log('🔄 Minute check detected reset time, triggering reset...');
-                        triggerDailyReset();
-                        if (minuteCheckInterval) clearInterval(minuteCheckInterval);
-                    }
-                }, 60 * 1000); // Check every minute for the first 3 hours
+        const scheduleNextReset = () => {
+            if (resetTimeout) {
+                clearTimeout(resetTimeout);
+                resetTimeout = null;
             }
-        }
 
-        // Check for missed resets when page becomes visible or comes back online
+            const now = new Date();
+            const nextResetAt = getNextCalgaryMidnightUTC();
+            const timeUntilReset = nextResetAt.getTime() - now.getTime();
+
+            console.log('📅 Next daily reset scheduled for Calgary midnight at', nextResetAt.toISOString());
+            console.log('⏰ Time until reset:', Math.round(timeUntilReset / 1000 / 60), 'minutes');
+
+            resetTimeout = setTimeout(() => {
+                lastResetTimestamp = Date.now();
+                triggerDailyReset();
+                scheduleNextReset();
+            }, timeUntilReset);
+        };
+
         const handleVisibilityChange = () => {
             if (!document.hidden) {
-                console.log('👁️ Page became visible, checking for missed daily resets...');
+                console.log('👁️ Page visible again; rescheduling Calgary daily reset if needed');
                 const now = new Date();
-                const resetHour = 19;
-                const resetMinute = 20;
+                const nextResetAt = getNextCalgaryMidnightUTC();
 
-                // If we're past the reset time today, trigger reset
-                if (now.getUTCHours() > resetHour || (now.getUTCHours() === resetHour && now.getUTCMinutes() >= resetMinute)) {
-                    console.log('🔄 Missed daily reset detected on visibility change, triggering reset...');
+                if (now >= nextResetAt && Date.now() - lastResetTimestamp > 60_000) {
+                    console.log('🔄 Missed reset detected, triggering immediately');
+                    lastResetTimestamp = Date.now();
                     triggerDailyReset();
                 }
-                // Re-schedule for next reset
-                setTimeout(checkAndScheduleReset, 1000);
+
+                scheduleNextReset();
             }
         };
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
 
-        // Also check every hour to handle timezone changes or clock adjustments
-        const hourlyCheck = setInterval(() => {
-            const now = new Date();
-            const resetHour = 19;
-            const resetMinute = 20;
-
-            // Check if we've passed 19:20 UTC today
-            if (now.getUTCHours() > resetHour || (now.getUTCHours() === resetHour && now.getUTCMinutes() >= resetMinute)) {
-                console.log('🔄 UTC daily reset time detected, triggering reset...');
-                triggerDailyReset();
-                clearInterval(hourlyCheck);
-                // Re-schedule for next reset
-                setTimeout(checkAndScheduleReset, 1000);
-            }
-        }, 60 * 60 * 1000); // Check every hour
+        scheduleNextReset();
 
         return () => {
             if (resetTimeout) clearTimeout(resetTimeout);
-            if (hourlyCheck) clearInterval(hourlyCheck);
-            if (minuteCheckInterval) clearInterval(minuteCheckInterval);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, []); // Only run once on mount
+    }, []);
 
     // Expose triggerDailyReset for manual testing (development only)
     useEffect(() => {

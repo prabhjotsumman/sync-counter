@@ -7,6 +7,18 @@
 
 import type { Counter } from '@/types';
 
+const CALGARY_TIMEZONE = 'America/Edmonton';
+
+const toCalgaryDate = (reference: Date = new Date()): Date => {
+  return new Date(reference.toLocaleString('en-US', { timeZone: CALGARY_TIMEZONE }));
+};
+
+const toUtcFromCalgary = (calgaryDate: Date, reference: Date): Date => {
+  const referenceCalgary = toCalgaryDate(reference);
+  const timezoneOffsetMs = referenceCalgary.getTime() - reference.getTime();
+  return new Date(calgaryDate.getTime() - timezoneOffsetMs);
+};
+
 // ============================================================================
 // COUNTER UTILITIES
 // ============================================================================
@@ -78,11 +90,10 @@ export const getRemainingCount = (counter: Counter): number => {
  * @returns Today's date string in YYYY-MM-DD format (UTC)
  */
 export const getTodayString = (): string => {
-  // Use UTC time to avoid timezone issues for global users
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(now.getUTCDate()).padStart(2, '0');
+  const calgaryNow = toCalgaryDate();
+  const year = calgaryNow.getFullYear();
+  const month = String(calgaryNow.getMonth() + 1).padStart(2, '0');
+  const day = String(calgaryNow.getDate()).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
 };
@@ -92,10 +103,23 @@ export const getTodayString = (): string => {
  * @returns Today's weekday name (e.g., "Monday", "Tuesday", etc.) in UTC
  */
 export const getTodayWeekdayUTC = (): string => {
-  // Use UTC time to avoid timezone issues for global users
-  const now = new Date();
+  const calgaryNow = toCalgaryDate();
   const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return weekdays[now.getUTCDay()];
+  return weekdays[calgaryNow.getDay()];
+};
+
+export const getCurrentCalgaryMidnightUTC = (reference: Date = new Date()): Date => {
+  const calgaryDate = toCalgaryDate(reference);
+  const calgaryMidnight = new Date(calgaryDate);
+  calgaryMidnight.setHours(0, 0, 0, 0);
+  return toUtcFromCalgary(calgaryMidnight, reference);
+};
+
+export const getNextCalgaryMidnightUTC = (reference: Date = new Date()): Date => {
+  const calgaryDate = toCalgaryDate(reference);
+  const calgaryMidnight = new Date(calgaryDate);
+  calgaryMidnight.setHours(24, 0, 0, 0);
+  return toUtcFromCalgary(calgaryMidnight, reference);
 };
 
 // ============================================================================
