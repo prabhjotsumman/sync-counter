@@ -124,7 +124,38 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
   }, [scheduleHideControls, clearHideControlsTimeout, customizationOpen]);
 
   const handleCustomizationUpdate = (updates: Partial<ExtendedCounter>) => {
-    const updatedCounter = { ...counter, ...updates } as ExtendedCounter;
+    const current = counter as ExtendedCounter;
+    const updatedCounter: ExtendedCounter = { ...current, ...updates };
+
+    if ('customImage' in updates) {
+      if (updates.customImage) {
+        updatedCounter.customImage = updates.customImage;
+      } else {
+        delete updatedCounter.customImage;
+        updatedCounter.image_url = null;
+      }
+    }
+
+    if ('image_url' in updates) {
+      updatedCounter.image_url = updates.image_url ?? null;
+    }
+
+    if ('customText' in updates && updates.customText === undefined) {
+      updatedCounter.customText = '';
+    }
+    if ('customTextSize' in updates && !updates.customTextSize) {
+      updatedCounter.customTextSize = 'md';
+    }
+    if ('customTextColor' in updates && !updates.customTextColor) {
+      updatedCounter.customTextColor = 'white';
+    }
+    if ('customTextWeight' in updates && !updates.customTextWeight) {
+      updatedCounter.customTextWeight = 'regular';
+    }
+    if ('customTextGlow' in updates && updates.customTextGlow === undefined) {
+      updatedCounter.customTextGlow = false;
+    }
+
     handleCounterUpdate(id, updatedCounter);
 
     if ('customImage' in updates) {
@@ -155,6 +186,27 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
       setCustomTextGlow(!!updates.customTextGlow);
     }
   };
+
+  const removeFullscreenImage = useCallback(async () => {
+    const targetId = counter?.id ?? id;
+    const fallbackClear = () => handleCustomizationUpdate({ customImage: undefined, image_url: null });
+
+    try {
+      const response = await fetch(`/api/counters/${targetId}/image`, { method: 'DELETE' });
+
+      if (!response?.ok) {
+        console.warn('⚠️ Failed to remove fullscreen image from server:', response?.status);
+        fallbackClear();
+        return;
+      }
+
+      console.log('🗑️ Fullscreen image removed from server for counter', targetId);
+      fallbackClear();
+    } catch (error) {
+      console.warn('⚠️ Error while removing fullscreen image from server:', error);
+      fallbackClear();
+    }
+  }, [counter?.id, id, handleCustomizationUpdate]);
 
   const safeGetItem = (key: string) => {
     try {
@@ -478,7 +530,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
                         onClick={(e) => {
                           e.stopPropagation();
                           console.log('🗑️ Remove full screen image button clicked');
-                          handleCustomizationUpdate({ customImage: undefined });
+                          removeFullscreenImage();
                         }}
                         className="bg-black bg-opacity-20 hover:bg-opacity-30 active:bg-opacity-40 text-white rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center text-sm font-bold border border-gray-400 hover:border-gray-300 transition-all duration-200 backdrop-blur-sm"
                         style={{ zIndex: 100 }}
@@ -553,7 +605,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
                         onClick={(e) => {
                           e.stopPropagation();
                           console.log('🗑️ Remove full screen image button clicked');
-                          handleCustomizationUpdate({ customImage: undefined });
+                          removeFullscreenImage();
                         }}
                         className="bg-black bg-opacity-20 hover:bg-opacity-30 active:bg-opacity-40 text-white rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center text-sm font-bold border border-gray-400 hover:border-gray-300 transition-all duration-200 backdrop-blur-sm"
                         style={{ zIndex: 100 }}

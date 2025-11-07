@@ -262,11 +262,20 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     inputEl.value = '';
   };
 
+  const handleClearImage = useCallback(() => {
+    console.log('🗑️ Clear image button clicked');
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    onUpdate({ customImage: undefined, image_url: null } as Partial<ExtendedCounter>);
+    clearCustomImage(counter.id);
+    console.log('🔄 Custom image cleared from state and storage');
+  }, [counter.id, onUpdate]);
+
   const handleRemoveImage = async () => {
     const fallbackClear = () => {
-      setImagePreview(null);
-      onUpdate({ customImage: undefined, image_url: null } as Partial<ExtendedCounter>);
-      clearCustomImage(counter.id);
+      handleClearImage();
     };
 
     try {
@@ -284,10 +293,6 @@ const CounterCustomization: React.FC<CounterCustomizationProps> = ({
     } catch (error) {
       console.warn('⚠️ Error while removing image from server:', error);
       fallbackClear();
-    }
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
     }
   };
 
