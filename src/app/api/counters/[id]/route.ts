@@ -1,18 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateCounter, deleteCounter, getCounter, addCounter } from '@/lib/counters';
 import { broadcastUpdate } from '../../sync/broadcast';
-
-/**
- * Gets today's date in UTC using YYYY-MM-DD format
- * @returns Today's date string in YYYY-MM-DD format (UTC)
- */
-const getTodayStringUTC = (): string => {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(now.getUTCDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+import { getTodayString, getTodayWeekdayUTC } from '@/utils';
 
 export async function PUT(
   request: NextRequest,
@@ -22,6 +11,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     const { name, value, dailyGoal, dailyCount, currentUser, counter_text } = body;
+    const normalizedUser = currentUser ? currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase() : undefined;
 
     const isTextOnlyUpdate =
       counter_text !== undefined &&
@@ -102,8 +92,10 @@ export async function PUT(
     if (typeof dailyCount === 'number') {
       // If dailyCount is provided, recalculate today's history to match
       if (counterToUpdate?.history) {
-        const today = getTodayStringUTC(); // Use UTC-based date
+        const today = getTodayString();
+        const dayName = getTodayWeekdayUTC();
         const adjustedHistory = { ...counterToUpdate.history };
+        const currentUsers = { ...(counterToUpdate.users || {}) };
 
         if (adjustedHistory[today]) {
           // If this is a reset (dailyCount === 0), clear today's history
@@ -112,46 +104,64 @@ export async function PUT(
             adjustedHistory[today] = {
               users: {},
               total: 0,
-              day: new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
+              day: dayName
             };
+            Object.keys(currentUsers).forEach(userKey => {
+              delete currentUsers[userKey];
+            });
           } else {
             // Update today's history to match the new dailyCount
             adjustedHistory[today] = {
               ...adjustedHistory[today],
+              day: dayName,
               total: dailyCount,
               // Keep existing user contributions but ensure total matches dailyCount
-              users: adjustedHistory[today].users || {},
+              users: { ...(adjustedHistory[today].users || {}) }
             };
 
             // Ensure the total matches the sum of user contributions
-            const userTotal = Object.values(adjustedHistory[today].users).reduce((sum, count) => sum + (count as number), 0);
+            let todayUsers = adjustedHistory[today].users || {};
+            const userKeys = Object.keys(todayUsers);
+            const userTotal = Object.values(todayUsers).reduce((sum, count) => sum + (count as number), 0);
             if (userTotal !== dailyCount) {
-              // If user contributions don't match dailyCount, scale them proportionally
-              const userKeys = Object.keys(adjustedHistory[today].users);
               if (userKeys.length > 0 && userTotal > 0) {
                 const scaleFactor = dailyCount / userTotal;
-                userKeys.forEach(userKey => {
-                  adjustedHistory[today].users[userKey] = Math.round((adjustedHistory[today].users[userKey] as number) * scaleFactor);
-                });
-                // Recalculate total after scaling
-                adjustedHistory[today].total = Object.values(adjustedHistory[today].users).reduce((sum, count) => sum + (count as number), 0);
+                let scaledTotal = 0;
+                todayUsers = userKeys.reduce<Record<string, number>>((acc, userKey, index) => {
+                  const scaledValue = Math.max(0, Math.round((todayUsers[userKey] as number) * scaleFactor));
+                  acc[userKey] = scaledValue;
+                  scaledTotal += scaledValue;
+                  // Adjust for rounding error on last user
+                  if (index === userKeys.length - 1) {
+                    const diff = dailyCount - scaledTotal;
+                    if (diff !== 0) {
+                      acc[userKey] = Math.max(0, acc[userKey] + diff);
+                      scaledTotal += diff;
+                    }
+                  }
+                  return acc;
+                }, {});
+              } else if (normalizedUser) {
+                todayUsers = { [normalizedUser]: dailyCount };
               } else {
-                // If no user contributions or they're 0, set total to match dailyCount
-                adjustedHistory[today].total = dailyCount;
+                todayUsers = {};
               }
+              adjustedHistory[today].users = todayUsers;
             }
+            adjustedHistory[today].total = dailyCount;
           }
         } else {
           // Create today's history entry if it doesn't exist
           adjustedHistory[today] = {
-            users: {},
+            users: normalizedUser && dailyCount > 0 ? { [normalizedUser]: dailyCount } : {},
             total: dailyCount,
-            day: new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
+            day: dayName
           };
         }
 
         // Update with the adjusted history
-        const updatedCounter = await updateCounter(id, { ...updateFields, history: adjustedHistory });
+        const usersForToday = adjustedHistory[today]?.users ? { ...adjustedHistory[today].users } : {};
+        const updatedCounter = await updateCounter(id, { ...updateFields, history: adjustedHistory, users: usersForToday });
         if (!updatedCounter) {
           return NextResponse.json(
             { error: 'Counter not found' },
