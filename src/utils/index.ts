@@ -7,9 +7,9 @@
 
 import type { Counter } from '@/types';
 
-const CALGARY_TIMEZONE = 'America/Edmonton';
+export const CALGARY_TIMEZONE = 'America/Edmonton';
 
-const toCalgaryDate = (reference: Date = new Date()): Date => {
+export const toCalgaryDate = (reference: Date = new Date()): Date => {
   return new Date(reference.toLocaleString('en-US', { timeZone: CALGARY_TIMEZONE }));
 };
 

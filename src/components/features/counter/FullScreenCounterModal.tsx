@@ -497,7 +497,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
           className="object-contain rounded-lg shadow-2xl"
         />
         <div
-          className={`absolute top-2 right-2 md:top-4 md:right-4 transition-opacity duration-300 ${
+          className={`absolute top-8 right-2 md:top-10 md:right-6 transition-opacity duration-300 ${
             controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
         >
@@ -520,16 +520,45 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     );
   };
 
-  const renderCounterValue = ({ className = '', includeDefaultMargin = true }: { className?: string; includeDefaultMargin?: boolean } = {}) => (
-    <span
-      className={`text-5xl md:text-[6rem] font-extrabold text-white drop-shadow-lg select-none ${
-        includeDefaultMargin ? 'mt-6 md:mt-8' : ''
-      } ${className}`.trim()}
-      style={{ letterSpacing: '0.05em' }}
-    >
-      {counter.value}
-    </span>
-  );
+  const renderCounterValue = ({
+    className = '',
+    includeDefaultMargin = true,
+    variant = 'default'
+  }: {
+    className?: string;
+    includeDefaultMargin?: boolean;
+    variant?: 'default' | 'solo' | 'singleContent';
+  } = {}) => {
+    const baseClasses = 'font-extrabold text-white drop-shadow-lg select-none text-center';
+    const sizeClasses = (() => {
+      if (variant === 'solo') return 'whitespace-nowrap leading-[0.85] max-w-[90vw] px-4';
+      if (variant === 'singleContent') return 'whitespace-nowrap leading-[0.88] max-w-[88vw] px-4';
+      return 'text-5xl md:text-[6rem]';
+    })();
+    const marginClasses = includeDefaultMargin ? 'mt-6 md:mt-8' : '';
+    const combinedClasses = [baseClasses, sizeClasses, marginClasses, className].filter(Boolean).join(' ');
+
+    const style: React.CSSProperties = {
+      letterSpacing: '0.05em',
+      ...(variant === 'solo'
+        ? {
+            fontSize: 'clamp(5rem, 20vw, 18rem)',
+            lineHeight: 0.85
+          }
+        : variant === 'singleContent'
+          ? {
+              fontSize: 'clamp(4.5rem, 17vw, 14rem)',
+              lineHeight: 0.88
+            }
+        : {})
+    };
+
+    return (
+      <span className={combinedClasses} style={style}>
+        {counter.value}
+      </span>
+    );
+  };
 
   const renderTextContent = () => {
     if (!hasCustomText) {
@@ -611,7 +640,11 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
               className="flex-1 flex items-center justify-center overflow-hidden min-h-0 w-full"
               style={{ height: `${bottomSectionHeight}%` }}
             >
-              {hasBothCustomContent ? renderTextContent() : showCounterBelowSeparator ? renderCounterValue({ includeDefaultMargin: false }) : <div className="w-full h-full" />}
+              {hasBothCustomContent
+                ? renderTextContent()
+                : showCounterBelowSeparator
+                  ? renderCounterValue({ includeDefaultMargin: false, variant: 'singleContent' })
+                  : <div className="w-full h-full" />}
             </div>
           </div>
         )}
@@ -642,7 +675,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
           })}
         </div>
         {/* Main counter value */}
-        {showCounterAtBottom && renderCounterValue()}
+        {showCounterAtBottom && renderCounterValue({ variant: showCounterInMainArea ? 'solo' : 'default' })}
       </div>
 
       {/* All buttons in single column - bottom right */}

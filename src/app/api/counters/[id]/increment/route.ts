@@ -2,18 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { Counter } from '@/lib/counters';
 import { updateCounter, getCounter, addCounter } from '@/lib/counters';
 import { broadcastUpdate } from '../../../sync/broadcast';
-
-/**
- * Gets today's date in UTC using YYYY-MM-DD format
- * @returns Today's date string in YYYY-MM-DD format (UTC)
- */
-const getTodayStringUTC = (): string => {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(now.getUTCDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+import { getTodayString, getTodayWeekdayUTC, toCalgaryDate } from '@/utils';
 
 /**
  * Converts a date string to UTC date string format
@@ -21,22 +10,22 @@ const getTodayStringUTC = (): string => {
  * @returns Date string in YYYY-MM-DD format (UTC)
  */
 const normalizeToUTCDate = (dateString?: string): string => {
-  if (!dateString) return getTodayStringUTC();
+  if (!dateString) return getTodayString();
 
   try {
     // Try to parse the date string
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
-      return getTodayStringUTC();
+      return getTodayString();
     }
 
-    // Convert to UTC and format
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
+    const calgaryDate = toCalgaryDate(date);
+    const year = calgaryDate.getFullYear();
+    const month = String(calgaryDate.getMonth() + 1).padStart(2, '0');
+    const day = String(calgaryDate.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   } catch {
-    return getTodayStringUTC();
+    return getTodayString();
   }
 };
 
@@ -86,8 +75,7 @@ export async function POST(
     }
 
     // Update history for today (UTC)
-    const todayDate = new Date();
-    const dayName = todayDate.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+    const dayName = getTodayWeekdayUTC();
 
     if (!history[dateKey]) {
       history[dateKey] = { users: {}, total: 0, day: dayName };
@@ -103,7 +91,7 @@ export async function POST(
 
     history[dateKey].total = Object.values(history[dateKey].users).reduce((a, b) => (a as number) + (b as number), 0);
 
-    // Calculate new dailyCount for today
+    // Calculate new dailyCount for today in Calgary time
     let newDailyCount = 0;
     if (history[dateKey] && history[dateKey].users) {
       newDailyCount = Object.values(history[dateKey].users).reduce((a, b) => (a as number) + (b as number), 0);
