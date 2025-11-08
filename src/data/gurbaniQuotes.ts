@@ -481,6 +481,6 @@ export const GURBANI_QUOTES = [
  */
 export interface GurbaniQuote {
   gurmukhi: string;
-  transliteration: string;
+  transliteration?: string;
   meaning: string;
 }
