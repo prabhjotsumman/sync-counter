@@ -415,6 +415,25 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     currentCounter: counter,
   });
 
+  const isInteractiveTarget = useCallback((target: EventTarget | null): boolean => {
+    if (!(target instanceof HTMLElement)) return false;
+    return Boolean(target.closest('[data-interactive="true"]'));
+  }, []);
+
+  const handleTapIncrement = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!event.isPrimary) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (event.pointerType === 'pen' && event.button !== 0) return;
+    if (isInteractiveTarget(event.target)) return;
+
+    if (event.pointerType === 'touch') {
+      event.preventDefault();
+    }
+
+    handleIncrement();
+    addBubble({ clientX: event.clientX, clientY: event.clientY });
+  }, [addBubble, handleIncrement, isInteractiveTarget]);
+
   useEffect(() => {
     if (!counter) return;
 
@@ -500,6 +519,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
           className={`absolute top-8 right-2 md:top-10 md:right-6 transition-opacity duration-300 ${
             controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
+          data-interactive="true"
         >
           <button
             onClick={(e) => {
@@ -579,12 +599,6 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
     );
   };
 
-  const onClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    console.log('🖱️ Modal onClick triggered - incrementing counter');
-    handleIncrement();
-    addBubble(event.nativeEvent);
-  };
-
   const showProgressBar = typeof counter.dailyGoal === 'number' && counter.dailyGoal > 0;
 
   return (
@@ -595,7 +609,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
         minWidth: '100vw',
         touchAction: 'manipulation',
       }}
-      onClick={onClick}
+      onPointerDown={handleTapIncrement}
     >
       {/* Progress bar in top-right corner (absolute) */}
       {showProgressBar && (
@@ -626,6 +640,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
               }`}
               onMouseDown={handleSeparatorMouseDown}
               onTouchStart={handleSeparatorTouchStart}
+              data-interactive="true"
               style={{ height: '12px' }}
             >
               <div className="w-16 h-1.5 bg-gray-400 rounded-full opacity-70 hover:opacity-100 transition-opacity shadow-sm" />
@@ -689,6 +704,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
         onTouchStart={(e) => e.stopPropagation()}
         onTouchEnd={(e) => e.stopPropagation()}
         style={{ touchAction: 'manipulation' }}
+        data-interactive="true"
       >
         {/* Customization buttons */}
         <CounterCustomization
@@ -708,6 +724,7 @@ export default function FullScreenCounterModal({ id, open, setOpen }: FullScreen
             onMouseUp={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
             onTouchEnd={(e) => e.stopPropagation()}
+            data-interactive="true"
             aria-label="Close Fullscreen"
           >
             &times;
