@@ -110,16 +110,31 @@ export async function PUT(
               delete currentUsers[userKey];
             });
           } else {
-            // Update today's history to match the new dailyCount
+            const existingEntry = adjustedHistory[today];
+            const previousTotal = typeof existingEntry.total === 'number' ? existingEntry.total : 0;
+
+            const normalizedExistingUsers = existingEntry.users
+              ? Object.entries(existingEntry.users).reduce<Record<string, number>>((acc, [userKey, count]) => {
+                  const numericCount = typeof count === 'number' ? count : Number(count);
+                  acc[userKey] = Number.isFinite(numericCount) ? numericCount : 0;
+                  return acc;
+                }, {})
+              : {};
+
+            if (normalizedUser) {
+              const delta = dailyCount - previousTotal;
+              if (delta > 0) {
+                normalizedExistingUsers[normalizedUser] = (normalizedExistingUsers[normalizedUser] ?? 0) + delta;
+              }
+            }
+
             adjustedHistory[today] = {
-              ...adjustedHistory[today],
+              ...existingEntry,
               day: dayName,
               total: dailyCount,
-              // Keep existing user contributions but ensure total matches dailyCount
-              users: { ...(adjustedHistory[today].users || {}) }
+              users: normalizedExistingUsers
             };
 
-            // Ensure the total matches the sum of user contributions
             let todayUsers = adjustedHistory[today].users || {};
             const userKeys = Object.keys(todayUsers);
             const userTotal = Object.values(todayUsers).reduce((sum, count) => sum + (count as number), 0);
@@ -148,6 +163,15 @@ export async function PUT(
               }
               adjustedHistory[today].users = todayUsers;
             }
+
+            adjustedHistory[today].users = Object.entries(adjustedHistory[today].users || {}).reduce<Record<string, number>>((acc, [userKey, count]) => {
+              const numericCount = typeof count === 'number' ? count : Number(count);
+              if (numericCount > 0) {
+                acc[userKey] = numericCount;
+              }
+              return acc;
+            }, {});
+
             adjustedHistory[today].total = dailyCount;
           }
         } else {
